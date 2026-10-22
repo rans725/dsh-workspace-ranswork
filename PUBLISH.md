@@ -55,12 +55,18 @@ npm publish --access public
 ## 四、给别人的安装方式
 
 ```bash
-# tarball（推荐，无需 git）
-pnpm add https://github.com/rans725/dsh-workspace-ranswork/archive/refs/heads/main.tar.gz
+# Release 附件（固定版本，推荐，无需 git）
+pnpm add https://github.com/rans725/dsh-workspace-ranswork/releases/download/v0.3.0/dsh-workspace-ranswork-0.3.0.tgz
 
-# 或 npm
+# 或 tag 源码归档
+pnpm add https://github.com/rans725/dsh-workspace-ranswork/archive/refs/tags/v0.3.0.tar.gz
+
+# 或 npm（发板后）
 pnpm add dsh-workspace-ranswork
 ```
+
+> **别用 `refs/heads/main`**：那样装到的是 `main` 的当前状态，你之后一改 main，
+> 所有人的安装结果就跟着变，不再是某个固定版本。发版一律写 tag。
 
 装完在插件管理器里启用 bundle，刷新 Web UI。
 
