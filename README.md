@@ -117,11 +117,20 @@ localStorage，双保险）。
 ### 安装
 
 ```bash
-# 从 GitHub 安装（固定版本，推荐）
-pnpm add https://github.com/rans725/dsh-workspace-ranswork/releases/download/v0.3.8/dsh-workspace-ranswork-0.3.8.tgz
+# 推荐：从 npm 安装
+pnpm add dsh-workspace-ranswork
+```
 
-# 或从源码打 tag 的归档安装
-pnpm add https://github.com/rans725/dsh-workspace-ranswork/archive/refs/tags/v0.3.8.tar.gz
+**请走 npm。** npm 安装的插件会被插件市场识别为可更新来源，新版本会出现在
+插件市场的「可更新」列表里；从 URL / Release 附件安装的包在 registry 里没有身份，
+市场只会如实报告“无更新”，等于每升一版都要你手动重装。
+
+```bash
+# 指定版本
+pnpm add dsh-workspace-ranswork@0.4.0
+
+# 不想用 npm 时（能装，但没有更新提醒）
+pnpm add https://github.com/rans725/dsh-workspace-ranswork/archive/refs/tags/v0.4.0.tar.gz
 
 # 本地开发时
 pnpm add link:/path/to/dsh-workspace-ranswork
@@ -229,11 +238,21 @@ no new routes, no polling, no files written.
 ### Install
 
 ```bash
-# From GitHub (pinned version, recommended)
-pnpm add https://github.com/rans725/dsh-workspace-ranswork/releases/download/v0.3.8/dsh-workspace-ranswork-0.3.8.tgz
+# Recommended: install from npm
+pnpm add dsh-workspace-ranswork
+```
 
-# or from the tagged source archive
-pnpm add https://github.com/rans725/dsh-workspace-ranswork/archive/refs/tags/v0.3.8.tar.gz
+**Use npm.** A plugin installed from the registry is recognized by the plugin market
+as an updatable source, so new versions show up in its "updates available" list.
+A package installed from a URL or a Release asset has no registry identity, so the
+market correctly reports "no update" — every version then needs a manual reinstall.
+
+```bash
+# pin a version
+pnpm add dsh-workspace-ranswork@0.4.0
+
+# without npm (installs fine, but no update notifications)
+pnpm add https://github.com/rans725/dsh-workspace-ranswork/archive/refs/tags/v0.4.0.tar.gz
 
 # or a local checkout, for development
 pnpm add link:/path/to/dsh-workspace-ranswork
