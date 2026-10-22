@@ -202,10 +202,9 @@ window.__ModuleLoader__.load({
       '.dsh-wso-title{margin:0;font-size:26px;line-height:1.26;font-weight:680;letter-spacing:-.02em}',
       '.dsh-wso-subtitle{margin:8px 0 0;max-width:600px;font-size:13px;line-height:1.6;color:var(--dsw-alias-label-secondary)}',
 
-      // ---- 工作区分组 --------------------------------------------------------
+      // ---- 面板容器 ----------------------------------------------------------
+      // 0.3.2：面板改成平坦列表，不再按工作区分块显示（工作区数据本身不变）。
       '.dsh-wso-groups{display:flex;flex-direction:column;gap:22px}',
-      '.dsh-wso-group{display:flex;flex-direction:column;gap:8px}',
-      '.dsh-wso-group-title{margin:0 0 2px;padding:0 2px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:16px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}',
 
       // ---- 卡片网格（对齐「使用统计」插件的概览卡片）-------------------------
       // 一行一个 → 自适应多列，空白收掉；窄屏自动回落到单列。
@@ -296,11 +295,23 @@ window.__ModuleLoader__.load({
       '.dsh-wso-check input{flex:none;width:14px;height:14px;margin:2px 0 0;accent-color:var(--dsw-alias-brand-primary,var(--dsw-brand-primary,#247bbf));cursor:pointer}',
       '.dsh-wso-note{margin:0;color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:18px}',
 
-      // ---- 卡片拖动反馈：浮起半透明 + 落点虚线 --------------------------------
-      '.dsh-wso-row.is-dragging{opacity:.5;transform:scale(.985);cursor:grabbing;border-style:dashed}',
-      '.dsh-wso-row.is-drop-before{box-shadow:inset 0 3px 0 -1px var(--dsw-alias-brand-primary,var(--dsw-brand-primary,#247bbf))}',
-      '.dsh-wso-row.is-drop-end{box-shadow:inset 0 -3px 0 -1px var(--dsw-alias-brand-primary,var(--dsw-brand-primary,#247bbf))}',
-      '.dsh-wso-rows.is-drop-target{outline:1px dashed var(--dsw-alias-brand-primary,var(--dsw-brand-primary,#247bbf));outline-offset:3px;border-radius:var(--dsw-radius-md,10px)}',
+      // ---- 卡片拖动：全程 pointer capture 跟手 --------------------------------
+      // touch-action:none 让触屏 / 手写笔也能拖（否则浏览器把手势抢去滚动）；
+      // user-select:none 从一开始就禁掉文字选中 —— 拖动中不会刷蓝。
+      '.dsh-wso-row{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}',
+      // 拖动中：不再有 hover 浮起，锁住光标；默认状态完全不透明（影子卡片负责跟手）。
+      // 注意：没有 .is-dragging 放大 / 缩小 —— 原卡原地"开口"才是拖动的视觉反馈。
+      '.dsh-wso-row.is-dragging{cursor:grabbing;border-style:dashed;border-color:var(--dsw-alias-border-l1);background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none;transform:none;transition:none}',
+      '.dsh-wso-row.is-dragging > *{opacity:.32;transition:opacity .12s}',
+      'body[data-ds-dark-theme] .dsh-wso-row.is-dragging{background:transparent}',
+      // 0.3.5：白条（is-drop-before / is-drop-end）整条下线条已**删除**。
+      // 落点改为「指针落在哪张卡上就跟它换位」，覆盖整张卡；拖动时其他卡片
+      // 实时让位，被拖卡的虚线空位跟着落点走 —— 松手前的画面就是松手后的
+      // 真实排列，不需要再靠一根线去瞄准缝隙。
+      // 跟手的"影子卡片"：fixed + 视口坐标 + 略倾斜 + 投影，pointer-events 全关，
+      // 拖动期间用 transform 移动（合成层，不触发布局）。
+      '.dsh-wso-ghost{position:fixed;left:0;top:0;z-index:2147483000;margin:0;pointer-events:none;opacity:.96;will-change:transform;transform-origin:0 0;box-shadow:0 18px 40px -14px rgba(0,0,0,.45),0 4px 12px -6px rgba(0,0,0,.28);outline:1px solid var(--dsw-alias-border-l1);border-radius:var(--dsw-radius-md,10px);transition:none}',
+      '.dsh-wso-ghost.is-returning{transition:transform .16s ease,opacity .16s ease;opacity:0}',
 
       // ---- 面板底部的一次性升级提示 ------------------------------------------
       '.dsh-wso-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:22px 2px 0;color:var(--dsw-alias-label-tertiary);font-size:11.5px;line-height:17px}',
@@ -314,6 +325,8 @@ window.__ModuleLoader__.load({
       '[data-dsh-panel-row]{cursor:grab;transition:box-shadow .12s,opacity .12s}',
       '[data-dsh-panel-dragging]{cursor:grabbing;opacity:.45}',
       'body.dsh-wso-sorting,body.dsh-wso-sorting *{cursor:grabbing!important;-webkit-user-select:none!important;user-select:none!important}',
+      // 卡片拖动期间：全页锁选中 + 锁光标（拖到卡片外、拖到侧栏文字上也不会刷蓝）
+      'body.dsh-wso-dragging-card,body.dsh-wso-dragging-card *{-webkit-user-select:none!important;user-select:none!important;cursor:grabbing!important}',
       '@media (prefers-reduced-motion:reduce){[data-dsh-panel-row]{transition:none}}',
     ].join('\n');
 
@@ -523,6 +536,15 @@ window.__ModuleLoader__.load({
     const PINNED_KEY = 'dsh.workspace-ranswork.pinned';
     const PINNED_COOKIE = 'dsh_wso_pinned';
 
+    // 0.3.2 自由排序：置顶只能表达「谁在最前」，中间卡片拖到哪里都只能是
+    // 「原地」或「置顶」，所以另存一份**平坦的卡片顺序**。
+    // 与置顶的分工刻意划死，避免两份数据互相覆盖：
+    //   - pinnedIds：只表达「哪些恒在最前」（不变）；
+    //   - ORDER_KEY：只表达「其余卡片之间」的相对顺序。
+    // 渲染时 pinned 在前、余下按 ORDER，再叠加还没进 ORDER 的新卡片（按默认顺序追加）。
+    const ORDER_KEY = 'dsh.workspace-ranswork.order';
+    const ORDER_COOKIE = 'dsh_wso_order';
+
     /**
      * 读一个 cookie（读不到返回 null，永不抛错）。
      *
@@ -577,22 +599,119 @@ window.__ModuleLoader__.load({
       }
     }
 
+    /** 读自由排序（cookie 优先，localStorage 兜底）。 */
+    function readOrder() {
+      const fromCookie = parseIdList(readCookie(ORDER_COOKIE));
+      if (fromCookie !== null) return fromCookie;
+      try {
+        if (typeof localStorage === 'undefined' || localStorage === null) return [];
+        return parseIdList(localStorage.getItem(ORDER_KEY)) ?? [];
+      } catch {
+        return [];
+      }
+    }
+
+    /** 写自由排序。 */
+    function writeOrder(ids) {
+      const text = JSON.stringify(Array.isArray(ids) ? ids : []);
+      writeCookie(ORDER_COOKIE, text);
+      try {
+        if (typeof localStorage !== 'undefined' && localStorage !== null) localStorage.setItem(ORDER_KEY, text);
+      } catch {
+        // 忽略
+      }
+    }
+
     /**
-     * 把置顶项提到每组最前面（其余保持原顺序）。
+     * 「自由顺序被重置」的订阅者集合。
      *
-     * @param rows - 行数组。
-     * @param pinned - 置顶 id 集合。
+     * 设置页（`GroupOrderSection`）和侧栏面板（`WorkspaceOverview`）是**两个
+     * 独立的组件实例**，各自持有自己的 `freeOrder` 状态。设置页把存储里的
+     * 顺序清掉之后，面板那份 state 还是旧值，它不会自己知道存储变了。
+     * 所以用一个模块级订阅表把「顺序已重置」广播出去。
+     *
+     * 不能用「渲染期对账存储」的办法：拖拽过程中 state 领先于存储，
+     * 对账会把刚拖好的顺序覆盖回旧值，表现为「拖不动」。
+     */
+    const orderResetListeners = new Set();
+
+    /** 广播「自由顺序已重置」，让所有挂载中的面板重新读取。 */
+    function notifyOrderReset() {
+      for (const listener of orderResetListeners) {
+        try {
+          listener();
+        } catch {
+          // 单个订阅者炸了不能连累其它面板
+        }
+      }
+    }
+
+    /** 订阅「自由顺序已重置」，返回退订函数。 */
+    function subscribeOrderReset(listener) {
+      orderResetListeners.add(listener);
+      return () => {
+        orderResetListeners.delete(listener);
+      };
+    }
+
+    /**
+     * 面板的展示顺序：先按自由排序，再把置顶项提到最前面。
+     *
+     * 0.3.2 的取舍：**一旦用户拖过卡片（有自由顺序），就以自由顺序为唯一真相**，
+     * 不再把置顶项强制前置。否则置顶卡片被拖到中间后会立刻被顶回首位，
+     * 表现就是「拖了没用」—— 这正是本次要修的 bug。
+     * 没有自由顺序时（还没拖过 / 清过缓存）仍然把置顶项提到最前面，
+     * 保持老版本「置顶就在最前」的观感。
+     * 置顶**标记**（卡片上的图钉）始终按 pinned 显示，与排序无关。
+     *
+     * @param rows - 行数组（默认顺序）。
+     * @param pinned - 置顶 id 集合（null / undefined = 不处理置顶）。
+     * @param freeOrder - `readOrder()` 读出来的 id 顺序（可省略）。
      * @returns 新数组。
      */
-    function applyPinnedOrder(rows, pinned) {
-      if (!Array.isArray(rows) || pinned === undefined || pinned === null) return rows;
+    function applyPinnedOrder(rows, pinned, freeOrder) {
+      if (!Array.isArray(rows)) return rows;
+      const hasFree = Array.isArray(freeOrder) && freeOrder.length > 0;
+      const ordered = applyFreeOrder(rows, freeOrder);
+      const safePinned = pinned === undefined || pinned === null ? null : pinned;
+      if (safePinned === null || hasFree) return ordered;
       const hot = [];
       const rest = [];
-      for (const row of rows) {
-        if (pinned.has(row.id)) hot.push(row);
+      for (const row of ordered) {
+        if (safePinned.has(row.id)) hot.push(row);
         else rest.push(row);
       }
       return [...hot, ...rest];
+    }
+
+    /**
+     * 按用户拖出来的平坦顺序排一次（与工作区分组无关）。
+     *
+     * 规则：ORDER 里出现过的卡片按 ORDER 的相对顺序排在前面；没出现过的
+     * （新会话 / 被清掉的旧 id）按传入的默认顺序追加到后面。
+     * 这样「新会话自动出现在末尾」不需要写存储，也不会打乱已有顺序。
+     *
+     * 纯函数，不修改入参。
+     *
+     * @param rows - 行数组（默认顺序，通常已按 updatedAt 倒序）。
+     * @param freeOrder - ORDER_* 读出来的 id 数组。
+     * @returns 新数组。
+     */
+    function applyFreeOrder(rows, freeOrder) {
+      if (!Array.isArray(rows)) return rows;
+      if (!Array.isArray(freeOrder) || freeOrder.length === 0) return rows.slice();
+      const rank = new Map();
+      for (let i = 0; i < freeOrder.length; i += 1) {
+        if (!rank.has(freeOrder[i])) rank.set(freeOrder[i], i);
+      }
+      const known = [];
+      const fresh = [];
+      for (const row of rows) {
+        if (row !== null && row !== undefined && rank.has(row.id)) known.push(row);
+        else fresh.push(row);
+      }
+      known.sort((a, b) => rank.get(a.id) - rank.get(b.id));
+      return [...known, ...fresh];
     }
 
     // ==========================================================================
@@ -713,7 +832,18 @@ window.__ModuleLoader__.load({
       const [draft, setDraft] = React.useState('');
       const [busy, setBusy] = React.useState(false);
       const [pinnedIds, setPinnedIds] = React.useState(readPinned);
+      // 0.3.2：自由排序（跨工作区的平坦顺序）。
+      const [freeOrder, setFreeOrder] = React.useState(readOrder);
       const [groupAuto, setGroupAuto] = React.useState(readGroupAuto);
+      // 设置页切「自动 / 固定」时会清掉自由顺序，而那是**另一个组件实例**写的存储：
+      // 本实例的 state 不会自动跟着变，表现就是「设置里切了，卡片没重排」。
+      // 订阅一次「顺序已重置」，收到后从存储重读（含开关状态）。
+      // 注意不能用「每帧对账」：拖拽过程中 state 领先于存储，对账会把刚拖好的
+      // 顺序覆盖回旧值，表现为「拖不动」。
+      React.useEffect(() => subscribeOrderReset(() => {
+        setFreeOrder(readOrder());
+        setGroupAuto(readGroupAuto());
+      }), []);
       // 一次性升级提示：仅当「迁成固定」且本地确有手动顺序记录时出现。
       // readGroupAuto() 的迁移分支已经写过开关，这里再读只会命中已存值，不会重复落盘。
       const [showOrderHint, setShowOrderHint] = React.useState(
@@ -724,6 +854,11 @@ window.__ModuleLoader__.load({
       // 组内拖动状态：{ key, id, target } —— target 是落点插入点（0 = 最前）。
       // 拖动中的卡片顺序由 rowOrder 记忆化，松手后再落到 pinnedIds（唯一真相）。
       const [drag, setDrag] = React.useState(null);
+      // 拖动状态的镜像 ref：pointerup 之类「渲染期绑定的回调」只能拿到旧闭包，
+      // 必须从 ref 读最新落点，否则落点永远是 null。
+      const dragRef = React.useRef(null);
+      dragRef.current = drag;
+
 
       const pinned = React.useMemo(() => new Set(pinnedIds), [pinnedIds]);
 
@@ -742,6 +877,29 @@ window.__ModuleLoader__.load({
         [signature, groupAuto, built],
       );
 
+      // 0.3.2：面板改成**一个平坦列表**，不再按工作区分块。
+      // 工作区归属仍然参与「有哪些卡片」（buildOverview 决定），只是不再决定
+      // 卡片在哪一块、能不能互相拖动。
+      // 默认顺序 = 各组按现有排序依次摊平（保持原有观感），再把自由排序叠上去。
+      const flat = React.useMemo(() => {
+        const rows = [];
+        const seenIds = new Set();
+        for (const group of Array.isArray(groups) ? groups : []) {
+          for (const row of Array.isArray(group?.rows) ? group.rows : []) {
+            if (seenIds.has(row.id)) continue;
+            seenIds.add(row.id);
+            rows.push(row);
+          }
+        }
+        return rows;
+      }, [signature, groupAuto, built]);
+
+      /** 面板实际展示顺序：置顶在前，其余按用户拖出来的自由顺序。 */
+      const panelOrder = React.useMemo(
+        () => applyPinnedOrder(flat, pinned, freeOrder),
+        [flat, pinned, freeOrder],
+      );
+
       const open = (id) => {
         setFailure('');
         try {
@@ -758,101 +916,736 @@ window.__ModuleLoader__.load({
       // mousedown → intent='click'；位移一旦 ≥5px → intent='drag'（不可逆，
       // 拖回原处也不回退）；mouseup 时 click 才打开会话，drag 只落位并屏蔽
       // 随后 200ms 的 click。指针状态放 ref 里：它变化不该触发渲染。
+      //
+      // 0.3.1 起改用 **Pointer Events + setPointerCapture**：鼠标移出卡片、
+      // 移到操作按钮或别的卡片上都不会中途丢事件（以前用 mouseleave 兜底，
+      // 一离开卡片就被当成取消，表现就是「拖不动 / 一停就断」）。
+      // 同时浮出一张 fixed 的「影子卡片」跟手 —— 原卡只留虚线占位。
       const pointerRef = React.useRef(null);
       /** 最近一次拖动结束的时间戳（用于屏蔽尾随 click）。 */
       const guardRef = React.useRef(0);
+      /** 跟手的影子卡片 DOM + 运行时几何（不进 state，避免每帧重渲染）。 */
+      const ghostRef = React.useRef(null);
+      const ghostInfoRef = React.useRef(null);
+      const rafRef = React.useRef(0);
+      /** 拖动期间禁止文本选中的 body class。 */
+      const SELECT_LOCK_CLASS = 'dsh-wso-dragging-card';
+      /** 指针捕获的目标元素（body，重渲染不换）。 */
+      let captureHost = null;
+
+      const setSelectLock = (on) => {
+        if (typeof document === 'undefined' || document === null) return;
+        const body = document.body;
+        if (body === null || body === undefined || body.classList === null || body.classList === undefined) return;
+        body.classList.toggle(SELECT_LOCK_CLASS, on);
+        // 捕获目标：body 在卡片重渲染时**不会**被替换。
+        // （把捕获挂在卡片自身上很脆——setDrag 引起重渲染后节点被换掉，
+        //  后续 pointermove / pointerup 就全丢了，表现是「拖一下就断」。）
+        captureHost = on ? body : null;
+      };
+
+      const removeGhost = (keepClass) => {
+        if (rafRef.current !== 0 && typeof cancelAnimationFrame === 'function') {
+          cancelAnimationFrame(rafRef.current);
+          rafRef.current = 0;
+        }
+        const node = ghostRef.current;
+        ghostRef.current = null;
+        ghostInfoRef.current = null;
+        if (node !== null && node !== undefined && node.parentNode !== null && node.parentNode !== undefined) {
+          node.parentNode.removeChild(node);
+        }
+        void keepClass;
+        setSelectLock(false);
+      };
+
+      /** 按当前指针位置移动影子卡片（rAF 合并，合成层 transform，不排版）。 */
+      const moveGhost = (x, y) => {
+        const info = ghostInfoRef.current;
+        const node = ghostRef.current;
+        if (info === null || node === null) return;
+        info.x = x;
+        info.y = y;
+        if (rafRef.current !== 0) return;
+        const apply = () => {
+          rafRef.current = 0;
+          const g = ghostInfoRef.current;
+          const el = ghostRef.current;
+          if (g === null || el === null) return;
+          // transform-origin 是 0 0，scale 会让抓取相对角点按比例放大：
+          // 只写 translate(x - dx) 时，指针下方那点会漂 (dx * (1 - scale))。
+          // 显式补回这一项，抓取点就永远钉在指针上（拖起来才「跟手」）。
+          const sx = g.x - g.dx * GHOST_SCALE;
+          const sy = g.y - g.dy * GHOST_SCALE;
+          el.style.transform = `translate3d(${sx}px,${sy}px,0) rotate(-1.2deg) scale(${GHOST_SCALE})`;
+        };
+        // 注意：这里必须**再排一帧**，而且 compare 的是最新指针位置；
+        // 只有第一帧需要 rAF 合并，之后每次 move 都要重新调度。
+        if (typeof requestAnimationFrame === 'function') rafRef.current = requestAnimationFrame(apply);
+        else apply();
+      };
+
+      /** 造影子卡片：克隆当前卡片外观，fixed 定位在指针下。 */
+      const spawnGhost = (rowEl, x, y) => {
+        removeGhost();
+        if (typeof document === 'undefined' || document === null || rowEl === null || rowEl === undefined) return;
+        let rect;
+        try {
+          rect = rowEl.getBoundingClientRect();
+        } catch {
+          return;
+        }
+        if (rect === null || rect.width <= 0 || rect.height <= 0) return;
+        const host = (document.body ?? document.documentElement);
+        if (host === null || host === undefined || typeof host.appendChild !== 'function') return;
+        const clone = rowEl.cloneNode(true);
+        if (clone === null || clone === undefined || clone.classList === null || clone.classList === undefined) return;
+        clone.removeAttribute('role');
+        clone.removeAttribute('tabindex');
+        clone.removeAttribute('id');
+        clone.setAttribute('aria-hidden', 'true');
+        // 克隆里残留的拖动 / 落点 class 一律清掉，也不参与命中。
+        clone.classList.remove('is-dragging');
+        clone.classList.add('dsh-wso-ghost');
+        clone.style.width = `${rect.width}px`;
+        clone.style.height = `${rect.height}px`;
+        clone.style.position = 'fixed';
+        clone.style.left = '0px';
+        clone.style.top = '0px';
+        clone.style.pointerEvents = 'none';
+        clone.style.margin = '0';
+        // 原卡被拖住时指针在卡片内部的位置，保持"抓住那个点"的手感。
+        ghostInfoRef.current = {
+          dx: x - rect.left,
+          dy: y - rect.top,
+          x,
+          y,
+        };
+        (host).appendChild(clone);
+        ghostRef.current = clone;
+        moveGhost(x, y);
+        setSelectLock(true);
+      };
+
+      /** 拖动开始：捕获到 body（稳定节点），而不是会被重渲染换掉的卡片。 */
+      const captureRow = (rowEl, pointerId) => {
+        const target = captureHost ?? rowEl;
+        try {
+          if (target !== null && target !== undefined && typeof target.setPointerCapture === 'function' && pointerId !== undefined) {
+            target.setPointerCapture(pointerId);
+          }
+        } catch {
+          // 捕获失败也能靠下面的 window 兜底监听继续。
+        }
+      };
+
+      const releaseCapture = (rowEl, pointerId) => {
+        const target = captureHost ?? rowEl;
+        try {
+          if (target !== null && target !== undefined && typeof target.hasPointerCapture === 'function'
+            && typeof target.releasePointerCapture === 'function' && pointerId !== undefined
+            && target.hasPointerCapture(pointerId)) {
+            target.releasePointerCapture(pointerId);
+          }
+        } catch {
+          // 已释放 / 已失效都无所谓
+        }
+      };
+
+      // 拖动期间的 window 兜底：卡片被重渲染、指针离开卡片、指针被别的元素
+      // 抢走，都能继续跟手；松手也一定收得到（否则会卡在"一直拖"的状态）。
+      const dragListenersRef = React.useRef(null);
+      const detachDragListeners = () => {
+        const bound = dragListenersRef.current;
+        dragListenersRef.current = null;
+        if (bound === null || typeof window === 'undefined' || window === null) return;
+        window.removeEventListener('pointermove', bound.move, true);
+        window.removeEventListener('pointerup', bound.up, true);
+        window.removeEventListener('pointercancel', bound.up, true);
+        window.removeEventListener('mousemove', bound.move, true);
+        window.removeEventListener('mouseup', bound.up, true);
+      };
+      const attachDragListeners = (id) => {
+        // 桩环境里 window 可能存在但没有 addEventListener —— 必须探测函数本身，
+        // 只看 typeof window 会在「假的 window」上炸掉整次渲染。
+        if (typeof window === 'undefined' || window === null) return;
+        if (typeof window.addEventListener !== 'function') return;
+        if (dragListenersRef.current !== null) return;
+        const move = (event) => {
+          const live = pointerRef.current;
+          if (live === null || live.intent !== 'drag') return;
+          // 只处理同一指针 / 鼠标事件（浏览器不实现 Pointer Events 时的回退）。
+          if (event.pointerId !== undefined && live.pointerId !== undefined && event.pointerId !== live.pointerId) return;
+          if (typeof event.preventDefault === 'function') event.preventDefault();
+          moveGhost(event.clientX, event.clientY);
+          live.lastX = event.clientX;
+          live.lastY = event.clientY;
+          setDrag({ id, target: dropIndexAt(event.clientX, event.clientY, live) });
+        };
+        const up = () => {
+          onCardPointerUpRef.current?.(id);
+        };
+        dragListenersRef.current = { move, up };
+        window.addEventListener('pointermove', move, true);
+        window.addEventListener('pointerup', up, true);
+        window.addEventListener('pointercancel', up, true);
+        window.addEventListener('mousemove', move, true);
+        window.addEventListener('mouseup', up, true);
+      };
+      /** 松手处理要能被旧的闭包引用到（window 监听里用 ref 取最新的）。 */
+      const onCardPointerUpRef = React.useRef(null);
 
       const openAfterClick = (id) => {
         if (Date.now() - guardRef.current < DRAG_CLICK_GUARD_MS) return;
         open(id);
       };
 
-      /** 落位：组内顺序 → 置顶集合（与置顶按钮共用 pinnedIds / PINNED_*）。 */
-      const dropCard = (groupKey, id, target) => {
-        const group = groups.find((item) => item.key === groupKey);
-        if (group === undefined || !Array.isArray(group.rows)) return;
-        const ids = group.rows.map((item) => item.id);
+      /** 落位：把卡片放到面板的任意位置，写进自由排序（与置顶互不覆盖）。 */
+      const dropCard = (id, target) => {
+        // 基准必须和落点同源：落点下标是从屏幕顺序（panelOrder）算的。
+        const ids = panelOrder.map((item) => item.id);
         const from = ids.indexOf(id);
         if (from < 0) return;
-        const order = moveCard(ids, from, target);
-        const nextPinned = applyDropPin(pinnedIds, id, pinAfterDrop(order, id));
+        // 落点没变 = 用户只是抖了一下，别写存储。
+        // `target` 已经在「剔除被拖卡片」的坐标系里（见 dropIndexAt），直接
+        // 按插入位置处理即可 —— 不能再替它做一次 `from < at` 的换算，
+        // 否则同一次拖动会被挪两次，表现就是「拖一格等于没拖」。
+        const order = insertAt(ids, from, target);
+        if (order.join(',') === ids.join(',')) {
+          setDrag(null);
+          return;
+        }
+        // 置顶只是**标记**，不参与排序（见 applyPinnedOrder 的说明），
+        // 所以落位时唯一要做的是：落到首位就顺带打上置顶标记，
+        // 其余情况一律保持原有置顶集合 —— 挪位不会让图钉凭空消失。
+        const shouldPin = pinAfterDrop(order, id);
+        const nextPinned = shouldPin && !pinned.has(id)
+          ? [id, ...(Array.isArray(pinnedIds) ? pinnedIds : []).filter((item) => item !== id)]
+          : (Array.isArray(pinnedIds) ? pinnedIds.slice() : []);
         setPinnedIds(nextPinned);
         writePinned(nextPinned);
+        setFreeOrder(order);
+        writeOrder(order);
       };
 
-      const onCardPointerDown = (groupKey, id, event) => {
+      const onCardPointerDown = (id, event) => {
         if (event.button !== 0) return;
-        pointerRef.current = { groupKey, id, x: event.clientX, y: event.clientY, intent: 'click' };
+        if (event.isPrimary === false) return;
+        // 正在重命名时不要起拖（输入框自己 stopPropagation，这里再兜一层）。
+        if (renaming === id) return;
+        pointerRef.current = {
+          id,
+          rowEl: event.currentTarget ?? null,
+          pointerId: event.pointerId,
+          x: event.clientX,
+          y: event.clientY,
+          intent: 'click',
+        };
       };
 
-      const onCardPointerMove = (groupKey, id, event) => {
+      const onCardPointerMove = (id, event) => {
         const state = pointerRef.current;
-        if (state === null || state.id !== id || state.groupKey !== groupKey) return;
+        if (state === null || state.id !== id) return;
         if (state.intent === 'drag') {
-          // 只在所属组内找落点 —— 跨组拖动无效、不改归属。
-          const rows = cardRowsOf(groupKey);
-          setDrag({ key: groupKey, id, target: insertionIndexAt(rows, event.clientY) });
+          if (typeof event.preventDefault === 'function') event.preventDefault();
+          moveGhost(event.clientX, event.clientY);
+          state.lastX = event.clientX;
+          state.lastY = event.clientY;
+          // 0.3.2：落点在**整个面板**里找，不再限于原工作区分组。
+          state.fallback = dropIndexAt(event.clientX, event.clientY, state);
+          setDrag({ id, target: state.fallback });
           return;
         }
         const moved = Math.abs(event.clientX - state.x) + Math.abs(event.clientY - state.y);
         if (moved < DRAG_THRESHOLD_PX) return;
         state.intent = 'drag';
-        const rows = cardRowsOf(groupKey);
-        setDrag({ key: groupKey, id, target: insertionIndexAt(rows, event.clientY) });
+        // 进入拖动的这一帧就要记下指针坐标：否则「起拖帧」之后如果没再收到
+        // pointermove（松手很快），落点会退回起拖点算，表现是拖了等于没拖。
+        state.lastX = event.clientX;
+        state.lastY = event.clientY;
+        // 冻结这一帧的网格几何 + 被拖卡片在其中的槽位：之后所有落点都按它算，
+        // 否则预览重排会让落点漂移（拖动中卡片乱跳 / 松手回原位）。
+        // 注意存的是**量好的数值**，不是 DOM 节点 —— 渲染会重建卡片节点，
+        // 松手时再对旧节点求 rect 只会得到全 0。
+        // 几何与 id 必须来自**同一次**查询：桩/真实 DOM 每次 querySelectorAll
+        // 都可能返回新对象，分两次取会让 grid 与 gridIds 错位。
+        // gridIds 用于命中测试（按 id 认卡，再回静态顺序查下标）；命中测试
+        // **不能**用实时 DOM —— 那会形成「让位 → 落点变 → 再让位」的反馈环。
+        const rowsNow = cardRowsOf();
+        state.grid = rowsNow.map((row) => {
+          try {
+            const rect = row.getBoundingClientRect();
+            return { left: rect.left ?? 0, top: rect.top ?? 0, width: rect.width ?? 0, height: rect.height ?? 0 };
+          } catch {
+            // 用零尺寸占位：下标必须和行一一对应，跳过会让 skipIndex 错位。
+            return { left: 0, top: 0, width: 0, height: 0 };
+          }
+        });
+        state.gridIds = rowsNow.map((row) => {
+          const rid = row !== null && row !== undefined && typeof row.getAttribute === 'function'
+            ? row.getAttribute('data-session-id')
+            : null;
+          return rid === undefined ? null : rid;
+        });
+        state.gridSkip = cardOrder().map((item) => item.id).indexOf(id);
+        // 被拖卡**自己那一格**的原始矩形：指针还压在自己身上 = 还没决定放哪，
+        // 落点就该是原位（否则缝隙算法会把「抓在第一张卡中线」直接算成第 2 格，
+        // 一按下去第二三张就闪）。
+        state.origin = state.gridSkip >= 0 && state.gridSkip < state.grid.length
+          ? state.grid[state.gridSkip]
+          : null;
+        // 起拖落点 = 被拖卡当前所在的位置（剔除坐标系下标）。之后指针没压到
+        // 任何别的卡时，落点就保持这里给的最后一个值，不再按缝隙乱跳。
+        state.fallback = state.gridSkip >= 0 ? state.gridSkip : 0;
+        spawnGhost(state.rowEl, event.clientX, event.clientY);
+        captureRow(state.rowEl, state.pointerId);
+        attachDragListeners(id);
+        setDrag({ id, target: dropIndexAt(event.clientX, event.clientY, state) });
       };
 
-      const onCardPointerUp = (groupKey, id) => {
+      const onCardPointerUp = (id) => {
         const state = pointerRef.current;
-        pointerRef.current = null;
+        // 元素处理器和 window 兜底都会调到这里：谁先到谁负责，另一个直接返回。
         if (state === null || state.id !== id) return;
+        pointerRef.current = null;
+        releaseCapture(state.rowEl, state.pointerId);
+        detachDragListeners();
+        removeGhost();
         if (state.intent !== 'drag') return; // 走 click 分支（打开会话）
-        const target = drag !== null && drag.id === id ? drag.target : null;
+        // 从 ref 读最新落点：onCardPointerUp 是渲染期绑到 DOM 上的，
+        // 闭包里的 drag 是**那次渲染**的值（拖动开始前 → null），
+        // 用闭包会把落点永远读成 null，表现就是「拖了但顺序不变」。
+        //
+        // 0.3.2 起落点直接**按最后指针位置 + 冻结的网格**重算一遍：实时
+        // 预览会重排卡片、`setDrag` 也未必赶在松手前落地，两条路都靠不住。
+        // 网格是拖动开始那一刻的快照，所以这里算出来的落点不会漂移。
+        const latest = dragRef.current;
+        const frozen = state.grid !== null && state.grid !== undefined && Array.isArray(state.grid);
+        const target = frozen && typeof state.lastX === 'number' && typeof state.lastY === 'number'
+          ? dropIndexAt(state.lastX, state.lastY, state)
+          : (latest !== null && latest.id === id ? latest.target : null);
         setDrag(null);
         guardRef.current = Date.now();
-        if (target !== null) dropCard(groupKey, id, target);
+        if (target !== null) dropCard(id, target);
       };
+      onCardPointerUpRef.current = onCardPointerUp;
 
-      /** 拖动轨迹被打断（拖出窗口 / 系统手势）时兜底清状态。 */
+      /** 拖动轨迹被打断（系统手势 / 指针被系统收走）时兜底清状态。 */
       const onCardPointerCancel = () => {
+        const state = pointerRef.current;
         pointerRef.current = null;
+        if (state !== null) releaseCapture(state.rowEl, state.pointerId);
+        detachDragListeners();
+        removeGhost();
         setDrag(null);
       };
 
+      // 卸载时把影子卡片 / 选中锁清理干净（面板关掉时不能留残留）。
+      if (typeof React.useEffect === 'function') {
+        React.useEffect(() => () => {
+          removeGhost();
+        }, []);
+      }
+
       /** 取某个组当前的卡片行 DOM（用于算落点）。 */
-      const cardRowsOf = (groupKey) => {
+      /** 面板里的卡片节点（平坦列表，0.3.2 起不再按组区分）。 */
+      const cardRowsOf = () => {
         try {
           if (typeof document === 'undefined' || document === null) return [];
-          const list = document.querySelectorAll(`.dsh-wso-rows[data-group-key="${groupKey}"] > .dsh-wso-row`);
+          const list = document.querySelectorAll('.dsh-wso-rows > .dsh-wso-row');
           return Array.prototype.slice.call(list);
         } catch {
           return [];
         }
       };
 
-      /** 某组渲染用的卡片顺序：静止时 = applyPinnedOrder()，拖动时 = 预览落位。 */
-      const cardOrder = (group) => {
-        const base = applyPinnedOrder(group.rows, pinned);
-        if (drag === null || drag.key !== group.key) return base;
+      /**
+       * 卡片网格的插入点：按「行优先」的阅读顺序算，而不是只看 top。
+       *
+       * 卡片网格是多列（auto-fill / minmax）——同一排的几张卡 top 相同，
+       * 只比 top 会让右边那一列的落点全部偏到最前。做法：
+       *   1) 按 (top, left) 排出阅读顺序（视觉顺序 === DOM 顺序，网格不打乱）；
+       *   2) 找到与指针在**同一排**的卡（top 区间包含指针 y）；
+       *   3) 同排里：指针在这张卡左半边 → 插到它前面；右半边 → 插到它后面。
+       */
+      /**
+       * @param rows - 卡片 DOM 列表（屏幕顺序）。
+       * @param x - 指针横坐标。
+       * @param y - 指针纵坐标。
+       * @param skipIndex - 先从这个列表里剔除的下标。拖动中的卡片自己仍占着一个
+       *   视觉槽位，但它不该是落点的参照物；不剔除会整体错一位。
+       * @returns 插入下标（相对剔除 skipIndex 之后的列表）。
+       */
+      const insertionIndexAtGrid = (rows, x, y, skipIndex = -1) => {
+        if (!Array.isArray(rows) || rows.length === 0) return 0;
+        // 剔除被拖者之后，还要把「原始 DOM 下标」重新映射成「剔除后列表的下标」，
+        // 否则被拖者前面的卡整体多算一位（落点差一格就是这么来的）。
+        const remap = (index) => (skipIndex >= 0 && index > skipIndex ? index - 1 : index);
+        // 先量成纯几何快照，再算落点。拖动一开始就必须量好：预览重排会
+        // **销毁这些节点**（客户端每次渲染都重建卡片列表），留 DOM 引用到
+        // 松手时再量，拿到的全是 `0,0,0`，落点就一律退化成「插到末尾」——
+        // 真 Chrome 里的表现就是「拖到最前却掉到最后」。
+        const boxes = [];
+        for (let i = 0; i < rows.length; i += 1) {
+          if (i === skipIndex) continue;
+          const row = rows[i];
+          // 已经量好的几何快照（拖动开始时 captureGrid 的产物）直接复用。
+          if (row !== null && row !== undefined && typeof row === 'object'
+            && typeof row.left === 'number' && typeof row.top === 'number'
+            && typeof row.width === 'number' && typeof row.height === 'number') {
+            boxes.push({ index: i, left: row.left, width: row.width, top: row.top, height: row.height });
+            continue;
+          }
+          if (row === null || row === undefined || typeof row.getBoundingClientRect !== 'function') continue;
+          let rect;
+          try {
+            rect = row.getBoundingClientRect();
+          } catch {
+            continue;
+          }
+          if (rect === null || rect === undefined) continue;
+          if (typeof rect.top !== 'number' || typeof rect.height !== 'number') continue;
+          boxes.push({ index: i, left: rect.left ?? 0, width: rect.width ?? 0, top: rect.top, height: rect.height });
+        }
+        if (boxes.length === 0) return 0;
+        // 0.3.5 起「指针落在某张卡上」由 `hitCardIdAt` 用**实时 DOM** 处理（卡片
+        // 会实时让位），这里只负责卡片之间的**缝隙 / 边缘**：按视觉顺序找最近的卡，
+        // 再按指针在它中心的哪一侧决定前后。用中心点距离而不是「中点在下方的第一张」，
+        // 卡片高度不一时空白处也不会突然跳到很远的落点。
+        const ordered = boxes.slice().sort((p, q) => (p.top - q.top) || (p.left - q.left));
+        let bestIndex = 0;
+        let bestDistance = Infinity;
+        let after = false;
+        for (let i = 0; i < ordered.length; i += 1) {
+          const box = ordered[i];
+          const cx = box.left + box.width / 2;
+          const cy = box.top + box.height / 2;
+          const distance = (x - cx) * (x - cx) + (y - cy) * (y - cy);
+          if (distance < bestDistance) {
+            bestDistance = distance;
+            bestIndex = remap(box.index);
+            // 指针在这张卡中心右侧 → 想插到它之后。
+            after = x > cx;
+          }
+        }
+        return after ? bestIndex + 1 : bestIndex;
+      };
+
+      /**
+       * 指针命中了哪张卡（0.3.5「实时让位」专用）。
+       *
+       * **几何用实时 DOM，但下标必须换算回静态顺序。** 这两个要求看似矛盾，
+       * 其实各有各的理由：
+       *
+       *   - 用实时 DOM：卡片一让位，屏幕上的位置就变了。若还拿起拖时的快照判定，
+       *     指标停在第一张卡自己的范围里（没碰到任何别的卡）也会算出一个跳动的
+       *     落点 —— 用户看到的就是「第一排第二三张卡莫名闪动」。
+       *   - 用起拖快照的下标空间：命中后把 id 映射回静态 `panelOrder` 再查下标，
+       *     于是落点是"谁"的函数，而不是"第几格"的函数，不会随重排自我强化。
+       *
+       * 曾经的反馈环（让位 → 指针下的卡变 → 落点变 → 再让位）是因为**下标空间**
+       * 也跟着实时顺序走；只让几何实时、下标走静态即可两全。
+       *
+       * @param x - 指针横坐标。
+       * @param y - 指针纵坐标。
+       * @param state - 本次拖动状态（`id` 用来跳过被拖那张）。
+       * @returns 命中的会话 id；没命中返回 null。
+       */
+      const hitCardIdAt = (x, y, state) => {
+        const grid = state !== null && Array.isArray(state.grid) ? state.grid : null;
+        const ids = state !== null && Array.isArray(state.gridIds) ? state.gridIds : null;
+        if (grid === null || ids === null) return null;
+        const draggingId = state.id;
+        // 0.3.7：命中多张卡时**取中心最近的那张**，不要"数组里第一个"。
+        //
+        // 快照里的矩形可能互相重叠（FLIP 过渡途中的位移、行高切换、hover 抬起），
+        // 交界处指针同时落在两张卡里。按数组顺序取第一个的话，指针在交界处轻微
+        // 抖动就会在两张卡之间来回翻 —— 落点跟着翻 = 卡片位置"错位一下又回来，
+        // 来回颠"。按中心距离取最近的那张是个连续函数，指针不动结果就不会变。
+        let bestId = null;
+        let bestDist = Infinity;
+        for (let i = 0; i < grid.length; i += 1) {
+          const box = grid[i];
+          const id = ids[i];
+          if (box === null || box === undefined || id === null || id === undefined) continue;
+          if (id === draggingId) continue;
+          if (x >= box.left && x <= box.left + box.width
+            && y >= box.top && y <= box.top + box.height) {
+            const cx = box.left + box.width / 2;
+            const cy = box.top + box.height / 2;
+            const dist = (x - cx) * (x - cx) + (y - cy) * (y - cy);
+            if (dist < bestDist) {
+              bestDist = dist;
+              bestId = id;
+            }
+          }
+        }
+        return bestId;
+      };
+
+      /**
+       * 拖动中的落点下标。
+       *
+       * 坐标系：**剔除被拖卡片之后**的静态列表（`panelOrder` 去掉它自己）。
+       * 不能拿拖动预览的 DOM 顺序当基准 —— 预览会随着落点变化不断重排，
+       * 落点就会自己漂移（表现为「拖住了但松手回到原位」）。
+       *
+       * 几何仍然取自真实 DOM（多列网格只有 DOM 知道每张卡在哪一格），
+       * 但下标经 `skipIndex` 剔除 + `remap` 回到静态坐标系。
+       *
+       * 几何必须来自**拖动开始时**那一帧（`state.grid` 快照），不能用实时的
+       * DOM —— 拖动预览会不断重排卡片，实时几何会让落点自己漂移，表现为
+       * 「拖住了但松手回到原位」。
+       *
+       * @param x - 指针横坐标。
+       * @param y - 指针纵坐标。
+       * @param state - 本次拖动的 pointer 状态（含 grid 快照）。
+       * @returns 去掉被拖者后的插入下标（0..n-1）。
+       */
+      const dropIndexAt = (x, y, state) => {
+        const grid = state !== null && Array.isArray(state.grid) ? state.grid : null;
+        if (grid === null) return 0;
+        // ---- 1. 指针还在**被拖卡自己原来的矩形**里 → 落点就是原位，直接结束 ----
+        //
+        // 0.3.6 修的就是这一段缺失。起拖后指针必然先停在自己那张卡上，而下面的
+        // 缝隙算法会把「指针在某张卡的左/右半边」换算成一个**别的**下标：
+        // 抓第一张卡的中线起拖，指针其实一动没动，落点就已经被算成第 2～3 格，
+        // 于是第一排第二三张卡立刻让位、第二排第一张被顶进空位 —— 用户看到
+        // 的「闪动 + 第二排第一张变半透明」正是这个。
+        //
+        // 语义上也该如此：把卡片挪开一点点、指针仍压在它自己身上 = 还没决定
+        // 要放到哪里，位置不该变。
+        const origin = state !== null && state.origin !== null && state.origin !== undefined
+          ? state.origin
+          : null;
+        if (origin !== null
+          && x >= origin.left && x <= origin.left + origin.width
+          && y >= origin.top && y <= origin.top + origin.height) {
+          const originIndex = state.gridSkip;
+          if (Number.isInteger(originIndex) && originIndex >= 0) return originIndex;
+        }
+        // ---- 2. 指针压在哪张卡上，就与它换位（整卡命中，几何用起拖快照） ----
+        const baseIds = panelOrder.map((item) => item.id);
+        const draggingId = state !== null ? state.id : null;
+        const hitId = hitCardIdAt(x, y, state);
+        if (hitId !== null) {
+          const at = baseIds.indexOf(hitId);
+          const from = draggingId === null ? -1 : baseIds.indexOf(draggingId);
+          if (at >= 0 && from >= 0) {
+            const rest = baseIds.filter((item) => item !== draggingId);
+            const anchor = rest.indexOf(hitId);
+            // 被拖卡要站在目标卡的位置：目标在它后面 → 插到目标之后。
+            const target = from < at ? anchor + 1 : anchor;
+            // 0.3.7：命中结果要**记成新的 fallback**。
+            //
+            // 不记的话，指针从「压在某张卡上」滑到「两张卡之间的缝隙」时，下面
+            // 第 3 分支返回的还是**起拖时**那个落点，而不是刚刚命中的那个 ——
+            // 落点凭空往回跳一次，卡片跟着翻回去再翻回来，视觉上就是
+            //「位置错一下又回来，来回颠」。记下来之后，"离开卡片"只是让落点
+            // 停在最后一次命中的位置，不再产生任何跳变。
+            if (state !== null) state.fallback = target;
+            return target;
+          }
+        }
+        // ---- 3. 落在缝隙 / 网格外：保持上一个落点，别乱跳 ----
+        //
+        // 这里曾退回「按快照缝隙重新算一个下标」，后果是：指针在两张卡之间的
+        // 缝隙里轻微抖动，落点就左右翻，卡片跟着来回滑（闪动的第二个来源）。
+        // 没放到任何卡上 = 还没决定要放哪，落点就该定住。
+        const fallback = state !== null && Number.isInteger(state.fallback) ? state.fallback : null;
+        if (fallback !== null) return fallback;
+        const hit = insertionIndexAtGrid(grid, x, y, state.gridSkip);
+        // grid 含被拖卡片，剔除后最多只剩 grid.length - 1 个位置可插（0..len-2）。
+        // 上限写成 len-1 会让「拖到末尾」多出一格，落点越界到被拖卡片自己的
+        // 旧槽位，`insertAt` 夹回后表现成「拖到末尾却没动」。
+        const last = Math.max(0, grid.length - 2);
+        return Math.max(0, Math.min(last, hit));
+      };
+
+      /**
+       * 面板渲染用的卡片顺序：静止时 = panelOrder，拖动时 = 预览落位。
+       *
+       * 必须用 `insertAt`（剔除被拖者之后的坐标系），不能用 `moveCard`。
+       * `drag.target` 来自 `dropIndexAt`，本来就是剔除坐标系；拿原数组坐标系的
+       * `moveCard` 去消费它，`from < at` 的换算会让「A 拖到 B 的位置」算成原地不动
+       * —— 预览不跟手，只剩白条画在第三张卡上（用户原话：拖到第二张卡时看不到
+       * 第一张变成第二张，白条却在第三张）。松手时 `dropCard` 走的是 `insertAt`，
+       * 于是又"突然"变了，两边不一致。同源即可解决。
+       */
+      const cardOrder = () => {
+        const base = panelOrder;
+        if (drag === null) return base;
         const ids = base.map((item) => item.id);
         const from = ids.indexOf(drag.id);
         if (from < 0) return base;
-        const next = moveCard(ids, from, drag.target);
+        const next = insertAt(ids, from, drag.target);
         const byId = new Map(base.map((item) => [item.id, item]));
         return next.map((id) => byId.get(id)).filter(Boolean);
       };
 
-      /** 某组卡片 id 的下标（拖动落点高亮用）。 */
-      const indexOfRow = (groupKey, id) => {
-        const group = groups.find((item) => item.key === groupKey);
-        if (group === undefined) return -1;
-        return cardOrder(group).findIndex((item) => item.id === id);
+      // ---- 实时让位（0.3.5）--------------------------------------------------
+      // 拖动时卡片会重排到新槽位。纯 grid 重排是瞬跳：被拖卡的空位「啪」地换地方，
+      // 眼睛跟不上。这里用 FLIP 把位移抹平 —— 上一帧记下每张卡的位置，渲染后量新
+      // 位置，先反向 translate 回旧位置，下一帧再归零，卡片就"滑"过去。
+      //
+      // 只记录**普通卡片**（拖动中）的位置；`is-dragging` 那张是空位，应瞬移跟随
+      // 落点，不能有过渡（否则空位会拖着一条尾巴追指针）。
+      const flipRef = React.useRef(null);
+
+      /**
+       * 量每张卡的**静止**位置。
+       *
+       * 关键：`getBoundingClientRect()` 量的是**合成后**的视觉位置，包含 FLIP 留下的
+       * inline `transform`。卡片正在过渡途中被量到，记下的基线就是偏掉的位置。
+       *
+       * 但**不能**靠"摘掉 inline transform 再量、量完还原"来做（0.3.7 第一版就是这么
+       * 写的，反而制造了新的闪动）：那等于每次渲染都对每张卡做两次样式写入 + 一次
+       * 强制回流，而且中途打断正在跑的过渡后还原，未必回到同一状态 —— `prev` 和
+       * `after` 的测量条件不对称，差分永远不为 0，FLIP 于是每帧都重来一遍
+       * （卡片在新位置上反复从旧位置滑过来 = 原地闪）。
+       *
+       * 正确做法：**FLIP 的终点必须自己就是"无 transform"的静止位置**。所以过渡
+       * 一旦跑完就立刻擦掉 inline 样式（见 `clearFlipStyle` / `transitionend`），
+       * 让 `getBoundingClientRect()` 天然量到静止位置，测量保持纯函数、无副作用。
+       *
+       * 用 `left`/`top` 而不是 `x`/`y`：`left` 已经是 translate 之后的结果，两者
+       * 在无旋转/缩放时一致，但 `left` 在所有浏览器里都有。
+       */
+      const measureCards = () => {
+        const list = [];
+        const rows = cardRowsOf();
+        for (let i = 0; i < rows.length; i += 1) {
+          const row = rows[i];
+          if (row === null || row === undefined) continue;
+          const id = row.getAttribute ? row.getAttribute('data-session-id') : null;
+          if (id === null || id === undefined) continue;
+          const dragging = typeof row.getAttribute === 'function' && row.getAttribute('data-dragging') === '1';
+          try {
+            const rect = row.getBoundingClientRect();
+            list.push({ id, row, dragging, left: rect.left ?? 0, top: rect.top ?? 0 });
+          } catch {
+            // 量不到就跳过，动画缺一帧不影响功能
+          }
+        }
+        return list;
       };
 
-      /** 某组卡片数量（落点「插到最后一个」的高亮用）。 */
-      const countRows = (groupKey) => {
-        const group = groups.find((item) => item.key === groupKey);
-        return group === undefined ? -1 : cardOrder(group).length;
+      /** 系统是否要求减少动态效果（尊重无障碍设置；量不到就当 false）。 */
+      const reducedMotion = () => {
+        try {
+          if (typeof window === 'undefined' || window === null) return false;
+          if (typeof window.matchMedia !== 'function') return false;
+          const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+          return query !== null && query !== undefined && query.matches === true;
+        } catch {
+          return false;
+        }
       };
+
+      /**
+       * 擦掉某张卡上 FLIP 留下的 inline 样式。
+       *
+       * 这一步不能省（0.3.7）：`el.style.transition` 是 **inline** 声明，优先级高于
+       * `.dsh-wso-row{transition:...}` 这条类规则。写完不复位的话，卡片会**永久**
+       * 带着 `transition:transform .16s` —— 于是之后再发生任何 transform 变化
+       * （最典型的就是 hover 的 `translateY(-1px)`）都被这 160ms 缓动接管，表现为
+       * 「跳一下再抖」。拖动时指针会扫过一串卡片，所以用户看到的是"被覆盖过的
+       * 卡片都开始闪烁"。同时类规则里 border/background/box-shadow 的过渡也被这
+       * 条 inline 声明一并顶掉，hover 变得生硬。
+       */
+      const clearFlipStyle = (el) => {
+        if (el === null || el === undefined || el.style === undefined) return;
+        el.style.transition = '';
+        el.style.transform = '';
+      };
+
+      /**
+       * FLIP：commit 之后调用。DOM 已经是新位置，与上一次记录的位置比较，
+       * 对发生位移的卡片先反向偏移再归零 —— 视觉上就是"滑过去"。
+       * 结束时把当前位置记下来，供下一次渲染比较。
+       */
+      const flipApply = () => {
+        const prev = flipRef.current;
+        // ---- 第一道闸：**顺序没变就什么都不做**（0.3.7 第二轮的核心修复）--------
+        //
+        // 用户原话：「第二张卡跳到第一张的位置这个没问题，但是我不松手继续动的
+        // 时候，第二张卡会在第一张的位置闪动」。
+        //
+        // FLIP 的定义是"先瞬移回旧位置，再滑到新位置"。只要它被**重复执行**，
+        // 卡片就会反复从旧位置重新出发 —— 在新位置上看就是原地闪。而它之所以会
+        // 被重复执行，是因为下面那个 `useLayoutEffect` **没有依赖数组、每次渲染
+        // 都跑**：拖动中任何无关的状态变化（hover 重绘、时间戳刷新）都会再进来一次，
+        // 这时卡片还在过渡途中，量到的 `after` 是中间值，`dx` 不为 0 → 又滑一遍。
+        //
+        // 所以这里先比**顺序签名**：顺序没变说明这一帧没有让位发生，直接返回。
+        // 这一步是纯字符串比较，连测量都不做。
+        const baseIds = cardRowsOf()
+          .map((row) => (row === null || row === undefined || typeof row.getAttribute !== 'function'
+            ? null : row.getAttribute('data-session-id')))
+          .filter((id) => id !== null && id !== undefined);
+        const nowIds = baseIds.join('|');
+        if (flipRef.order === nowIds) return;
+
+        const nowList = measureCards();
+        const nowById = new Map();
+        for (let i = 0; i < nowList.length; i += 1) nowById.set(nowList[i].id, nowList[i]);
+        // 减少动态效果时不做位移过渡（直接跳位），功能一致、只是不滑。
+        if (Array.isArray(prev) && drag !== null && !reducedMotion()) {
+          for (let i = 0; i < prev.length; i += 1) {
+            const before = prev[i];
+            if (before.dragging) continue;
+            const after = nowById.get(before.id);
+            if (after === undefined || after.dragging) continue;
+            const dx = before.left - after.left;
+            const dy = before.top - after.top;
+            const el = after.row;
+            if (el === null || el === undefined || el.style === undefined) continue;
+            // 没有位移：可能是上一次过渡已经跑完（或本来就静止）。顺手把上轮的
+            // inline 样式擦掉再跳过，别让它留在卡上继续干扰 hover。
+            if (Math.abs(dx) < 1 && Math.abs(dy) < 1) {
+              clearFlipStyle(el);
+              continue;
+            }
+            el.style.transition = 'none';
+            el.style.transform = `translate(${dx}px, ${dy}px)`;
+            // 强制一次回流，否则同一帧里改回去会被合并成"没动"。
+            void el.offsetWidth;
+            el.style.transition = 'transform .16s cubic-bezier(.2,.7,.3,1)';
+            el.style.transform = '';
+            // 过渡结束后把 inline 样式收回去 —— 不然后续 hover 的 translateY
+            // 会被这条 inline transition 接管，变成持续闪动。
+            const rowEl = el;
+            const done = () => {
+              clearFlipStyle(rowEl);
+              rowEl.removeEventListener('transitionend', done);
+            };
+            rowEl.addEventListener('transitionend', done);
+          }
+        } else {
+          // 不在拖动中（或系统要求减少动态效果）：不滑，但上轮残留必须清掉。
+          // 同时把顺序签名作废 —— 不在拖动中不做让位动画，下次起拖第一帧要能重新
+          // 建立基线（否则拖起来第一下会缺一帧）。
+          for (let i = 0; i < nowList.length; i += 1) clearFlipStyle(nowList[i].row);
+          flipRef.order = null;
+          flipRef.current = nowList;
+          return;
+        }
+        flipRef.current = nowList;
+        flipRef.order = nowIds;
+      };
+
+      // 必须用 useLayoutEffect：它在 DOM 更新后、**浏览器绘制前**触发。
+      // 换成 useEffect 的话，用户会先看到瞬跳一帧，再看到滑动 —— 等于动画白做。
+      // 桩环境没有 useLayoutEffect 时退回 useEffect（只影响动画，不影响功能）。
+      const useCommitEffect = typeof React.useLayoutEffect === 'function'
+        ? React.useLayoutEffect
+        : React.useEffect;
+      if (typeof useCommitEffect === 'function') {
+        // 无依赖数组 = 每次渲染都跑，拖动中落点每变一次就让位一次。
+        useCommitEffect(() => {
+          flipApply();
+        });
+      }
 
       /** 统一的动作执行器：清状态 → 调用 → 失败提示。 */
       const run = (action) => {
@@ -981,23 +1774,32 @@ window.__ModuleLoader__.load({
       // 一张卡片 = 一次会话。结构对齐「使用统计」插件的概览卡：
       //   [状态点 + 时间 / 进行中胶囊] [两行标题] [打开提示 + 箭头]
       // 卡片本体是 div[role=button]：<button> 里不能再嵌操作按钮。
-      const rowOf = (groupKey) => (row) => h('div', {
+      const rowOf = () => (row) => h('div', {
         key: row.id,
-        className: 'dsh-wso-row'
-          + (drag !== null && drag.id === row.id ? ' is-dragging' : '')
-          + (drag !== null && drag.key === groupKey && drag.target === indexOfRow(groupKey, row.id) ? ' is-drop-before' : '')
-          + (drag !== null && drag.key === groupKey && drag.target === countRows(groupKey) ? ' is-drop-end' : ''),
+        className: 'dsh-wso-row' + (drag !== null && drag.id === row.id ? ' is-dragging' : ''),
         role: 'button',
         tabIndex: 0,
         title: row.title,
         'aria-label': `${t('openTitle')}: ${row.title}`,
         'data-session-id': row.id,
-        // click 只负责「没拖动过」的情况；拖动结束后的尾随 click 由 guard 拦掉。
+        // 标记被拖那张：FLIP 让位要跳过它（空位应瞬移贴住落点，不能拖着尾巴）。
+        ...(drag !== null && drag.id === row.id ? { 'data-dragging': '1' } : {}),
+        // 点击只负责「没拖动过」的情况；拖动结束后的尾随 click 由 guard 拦掉。
         onClick: () => openAfterClick(row.id),
-        onMouseDown: (event) => onCardPointerDown(groupKey, row.id, event),
-        onMouseMove: (event) => onCardPointerMove(groupKey, row.id, event),
-        onMouseUp: () => onCardPointerUp(groupKey, row.id),
-        onMouseLeave: () => onCardPointerCancel(),
+        // 用 Pointer Events（不是 mouse*）：capture 之后移出卡片也不会断。
+        onPointerDown: (event) => onCardPointerDown(row.id, event),
+        onPointerMove: (event) => onCardPointerMove(row.id, event),
+        onPointerUp: () => onCardPointerUp(row.id),
+        onPointerCancel: () => onCardPointerCancel(),
+        onLostPointerCapture: () => {
+          // 系统收走指针（切窗口 / 手势）时兜底；正常松手时 state 已清空，这里是 no-op。
+          if (pointerRef.current !== null && pointerRef.current.intent === 'drag') onCardPointerCancel();
+        },
+        // 拖动中不弹右键菜单 / 原生拖拽，避免打断跟手。
+        onContextMenu: (event) => {
+          if (pointerRef.current !== null && pointerRef.current.intent === 'drag') event.preventDefault();
+        },
+        onDragStart: (event) => event.preventDefault(),
         // 键盘行为不变：Enter / Space 依然直接打开。
         onKeyDown: (event) => {
           if (event.key === 'Enter' || event.key === ' ') {
@@ -1070,13 +1872,9 @@ window.__ModuleLoader__.load({
             h('span', { className: 'dsh-wso-empty-icon' }, h(EmptyGlyph, { size: 20 })),
             h('div', { className: 'dsh-wso-empty-title' }, loading ? t('loading') : t('empty')),
             h('div', { className: 'dsh-wso-empty-hint' }, t('emptyHint')))
-        : h('div', { className: 'dsh-wso-groups' }, groups.map((group) => h('section', {
-            className: 'dsh-wso-group',
-            key: group.key,
-            'data-group-key': group.key,
-          },
-            h('h2', { className: 'dsh-wso-group-title', title: group.title }, group.title),
-            h('div', { className: 'dsh-wso-rows', 'data-group-key': group.key }, cardOrder(group).map(rowOf(group.key))))));
+        // 0.3.2：一个平坦列表，不再按工作区分块（工作区数据本身不变）。
+        : h('div', { className: 'dsh-wso-groups' },
+            h('div', { className: 'dsh-wso-rows' }, cardOrder().map(rowOf())));
 
       // 升级提示：只在「迁移成固定」且确实有手动顺序记录时出现一次，
       // 点「去设置」直接跳到设置页的「进行中/对话总览」区块；关掉就永不再来。
@@ -1316,24 +2114,31 @@ window.__ModuleLoader__.load({
     const DRAG_THRESHOLD_PX = 5;
     /** 拖动落位后屏蔽随后 click 的时长（ms）。 */
     const DRAG_CLICK_GUARD_MS = 200;
+    /** 影子卡片放大比例（比原卡略大一点，视觉上「浮起来」）。 */
+    const GHOST_SCALE = 1.02;
 
     /**
-     * 把组内某张卡片移到目标插入点。
+     * 把一个元素搬到「剔除它自己之后的第 target 位」。
      *
-     * 纯函数：不改入参、不读全局。目标点是最前（0）即「置顶」。
+     * 这是拖动落点的**唯一**消费方式：`insertionIndexAtGrid` 的 skipIndex/remap
+     * 已经把下标换算到「剔除被拖者之后」的坐标系，这里直接按插入位置处理。
      *
-     * @param ids - 组内当前顺序（卡片 id）。
-     * @param from - 被拖卡片的下标。
-     * @param target - 目标插入点（0 = 最前，ids.length = 最后）。
-     * @returns 新顺序数组。
+     * 0.3.2 之前这里还有一个 `moveCard`（target 是**原数组**下标，内部替你做
+     * `from < at` 的换算）。拖动预览当时错用了它，同一个下标被换算两次，于是
+     * 「A 拖到 B 的位置」算成原地不动 —— 预览不跟手，只有白条跑到后面那张上
+     * （0.3.4 修的 bug）。那个函数已删除，别再加回来：卡片拖动**只有一套坐标系**。
+     *
+     * @param ids - 当前顺序。
+     * @param from - 被搬元素的下标。
+     * @param target - 剔除被搬元素后的插入下标。
+     * @returns 新顺序（不改原数组）。
      */
-    function moveCard(ids, from, target) {
+    function insertAt(ids, from, target) {
       const list = Array.isArray(ids) ? ids.slice() : [];
       if (from < 0 || from >= list.length) return list;
-      const at = Math.max(0, Math.min(list.length, Number.isFinite(target) ? target : from));
       const [moved] = list.splice(from, 1);
-      const to = from < at ? at - 1 : at;
-      list.splice(Math.max(0, Math.min(list.length, to)), 0, moved);
+      const at = Math.max(0, Math.min(list.length, Number.isFinite(target) ? target : from));
+      list.splice(at, 0, moved);
       return list;
     }
 
@@ -1352,6 +2157,9 @@ window.__ModuleLoader__.load({
 
     /**
      * 拖动后的置顶集合：只增删被拖这张卡片，其余置顶项原样保留。
+     *
+     * 0.3.2 起 `dropCard()` 会额外把「落到置顶项前面」也算成一处置顶移位，
+     * 所以置顶集合的更新已经内联在那边；这里保留成纯函数供测试与复用。
      *
      * @param pinnedIds - 当前置顶 id 数组。
      * @param id - 被拖卡片 id。
@@ -1917,8 +2725,14 @@ window.__ModuleLoader__.load({
       const [cardActions, setCardActions] = React.useState(readCardActions);
 
       const choose = (value) => {
+        if (value === auto) return;
         setAuto(value);
         writeGroupAuto(value);
+        // 手动拖出来的顺序会压住「自动 / 固定」的排序结果（applyPinnedOrder
+        // 见到自由顺序就原样返回）。切模式是用户明确要求换一种排法，
+        // 所以顺手清掉手动顺序，否则设置页点了没反应。
+        writeOrder([]);
+        notifyOrderReset();
       };
 
       /** 切换一个卡片按钮；抹掉最后一个会自动回退成全开。 */
