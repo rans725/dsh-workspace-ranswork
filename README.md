@@ -118,10 +118,10 @@ localStorage，双保险）。
 
 ```bash
 # 从 GitHub 安装（固定版本，推荐）
-pnpm add https://github.com/rans725/dsh-workspace-ranswork/releases/download/v0.3.0/dsh-workspace-ranswork-0.3.0.tgz
+pnpm add https://github.com/rans725/dsh-workspace-ranswork/releases/download/v0.3.8/dsh-workspace-ranswork-0.3.8.tgz
 
 # 或从源码打 tag 的归档安装
-pnpm add https://github.com/rans725/dsh-workspace-ranswork/archive/refs/tags/v0.3.0.tar.gz
+pnpm add https://github.com/rans725/dsh-workspace-ranswork/archive/refs/tags/v0.3.8.tar.gz
 
 # 本地开发时
 pnpm add link:/path/to/dsh-workspace-ranswork
@@ -230,10 +230,10 @@ no new routes, no polling, no files written.
 
 ```bash
 # From GitHub (pinned version, recommended)
-pnpm add https://github.com/rans725/dsh-workspace-ranswork/releases/download/v0.3.0/dsh-workspace-ranswork-0.3.0.tgz
+pnpm add https://github.com/rans725/dsh-workspace-ranswork/releases/download/v0.3.8/dsh-workspace-ranswork-0.3.8.tgz
 
 # or from the tagged source archive
-pnpm add https://github.com/rans725/dsh-workspace-ranswork/archive/refs/tags/v0.3.0.tar.gz
+pnpm add https://github.com/rans725/dsh-workspace-ranswork/archive/refs/tags/v0.3.8.tar.gz
 
 # or a local checkout, for development
 pnpm add link:/path/to/dsh-workspace-ranswork
