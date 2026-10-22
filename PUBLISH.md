@@ -42,28 +42,67 @@ git push -u origin main
 先在 GitHub 上**新建空仓库** `dsh-workspace-ranswork`（不要勾选 README/LICENSE，
 否则要先 pull）。
 
-## 三、发布到 npm（可选）
+## 三、发布到 npm（**主要渠道**）
+
+从 0.4.0 起 npm 是正式分发渠道，插件市场认这个来源。
 
 ```bash
-npm login
-npm publish --access public
+cd F:/work/github/dsh-workspace-ranswork
+
+# 1. 拿 token（npmjs.com → Access Tokens → Generate → Granular 或 Classic Automation）
+#    必须勾 "Bypass two-factor authentication (2FA)"，否则 403
+printf '//registry.npmjs.org/:_authToken=%s\nregistry=https://registry.npmjs.org/\naccess=public\n' \
+  "$TOKEN" > .npmrc-pub
+export NPM_CONFIG_USERCONFIG="$(pwd)/.npmrc-pub"
+
+# 2. 发布（pnpm publish 不支持 --userconfig，只能走环境变量）
+pnpm publish --no-git-checks --access public
+
+# 3. 清理
+rm -f .npmrc-pub
 ```
 
 `package.json` 里**没有** `private: true`，可以直接发布。
-`files` 已显式列出，`node_modules`、`*.tgz` 不会进包。
+`files` 已显式列出，`node_modules`、`*.tgz` 不会进包（实测 9 个文件）。
+
+### 发布后必须验证（顺序很重要）
+
+```bash
+# a) 版本元数据（几乎立刻可查）
+curl -s -o /dev/null -w "%{http_code}\n" \
+  https://registry.npmjs.org/dsh-workspace-ranswork/0.4.0
+
+# b) tarball —— 这个会延迟 10~60 秒，404 就先等等，别急着判失败
+curl -s -o /dev/null -w "%{http_code}\n" \
+  https://registry.npmjs.org/dsh-workspace-ranswork/-/dsh-workspace-ranswork-0.4.0.tgz
+
+# c) 真实安装（最有说服力）
+mkdir -p /tmp/it && cd /tmp/it && echo '{"name":"t","version":"1.0.0"}' > package.json
+pnpm add dsh-workspace-ranswork && cat node_modules/dsh-workspace-ranswork/package.json | grep version
+```
+
+> 反向确认技巧：对同版本再发一次，若报
+> `You cannot publish over the previously published versions`，说明上次其实已经成功。
 
 ## 四、给别人的安装方式
 
 ```bash
-# Release 附件（固定版本，推荐，无需 git）
-pnpm add https://github.com/rans725/dsh-workspace-ranswork/releases/download/v0.3.0/dsh-workspace-ranswork-0.3.0.tgz
-
-# 或 tag 源码归档
-pnpm add https://github.com/rans725/dsh-workspace-ranswork/archive/refs/tags/v0.3.0.tar.gz
-
-# 或 npm（发板后）
+# 推荐：npm（市场能推送更新）
 pnpm add dsh-workspace-ranswork
+
+# 固定版本
+pnpm add dsh-workspace-ranswork@0.4.0
+
+# 不想用 npm 时（能装，但收不到更新提醒）
+pnpm add https://github.com/rans725/dsh-workspace-ranswork/archive/refs/tags/v0.4.0.tar.gz
 ```
+
+> **⚠️ 为什么推荐 npm**：从 Release 附件 URL 或 tag 归档装的包，插件市场**永远**报"无更新"。
+> 市场对 URL 安装没有 registry 身份可比，宁可不说也不猜错（dshmarket #768）。
+> 只有裸包名（npm）安装才能进入常规更新流程。
+
+> **老用户必须重装一次**：0.3.x 用 URL 装的人，lockfile 里记的还是 URL，改 npm 后**仍然收不到推送**。
+> `pnpm remove dsh-workspace-ranswork && pnpm add dsh-workspace-ranswork`
 
 > **别用 `refs/heads/main`**：那样装到的是 `main` 的当前状态，你之后一改 main，
 > 所有人的安装结果就跟着变，不再是某个固定版本。发版一律写 tag。
