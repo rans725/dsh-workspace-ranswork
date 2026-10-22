@@ -1,0 +1,30 @@
+{
+  "meta": {
+    "title": "Running / Conversations",
+    "description": "A sidebar panel that lists only running tasks while something is running, and falls back to every conversation grouped by workspace otherwise. Cards support pin, rename, copy id, fork, stop and archive, and can be dragged within a group to reorder or pin."
+  },
+  "nav": "Running / Conversations",
+  "pageTitle": "Running / Conversations",
+  "pageDesc": "Choose how workspace groups are ordered. Auto sorts by activity: groups with a running session first, then by most recent activity, with “Ungrouped” always last.",
+  "modeLabel": "Group order",
+  "modeAuto": "Auto",
+  "modeAutoDesc": "The most recently active group goes first, running groups lead, and “Ungrouped” stays last.",
+  "modeFixed": "Fixed",
+  "modeFixedDesc": "Ignore activity and always keep the original workspace order.",
+  "cardActionsTitle": "Card buttons",
+  "cardActionsLabel": "Card buttons",
+  "cardActionsDesc": "Choose which buttons appear in the card action strip. Changes apply immediately.",
+  "cardActionsStopNote": "“Stop” is not in this list: running cards always show it so you can interrupt at any time.",
+  "cardActionsEmptyNote": "Unchecking everything falls back to all-on, so the action strip is never empty.",
+  "cardActionsDragNote": "Tip: cards can be dragged within their own group. Drop one at the top of the group to pin it; drop it anywhere else to unpin it.",
+  "act_pin": "Pin",
+  "act_pinDesc": "Move the card to the top of its group (this panel only).",
+  "act_rename": "Rename",
+  "act_renameDesc": "Edit the title in place on the card.",
+  "act_copy": "Copy session ID",
+  "act_copyDesc": "Copy the session ID to the clipboard.",
+  "act_fork": "Fork",
+  "act_forkDesc": "Create a branch from the current point.",
+  "act_archive": "Archive",
+  "act_archiveDesc": "Move the session to the archive (asks for confirmation)."
+}

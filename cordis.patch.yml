@@ -1,0 +1,4 @@
+- insert:
+    - id: workspace-ranswork
+      name: 'dsh-workspace-ranswork'
+      config: {}

@@ -1,0 +1,229 @@
+# dsh-workspace-ranswork
+
+> Workspace overview for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) — one panel that shows what is running right now, and falls back to all conversations when nothing is.
+
+[中文说明](#中文) · [English](#english)
+
+---
+
+## 中文
+
+### 它做什么
+
+侧边栏多一个入口，主面板按工作区分组展示会话：
+
+| 状态 | 侧栏按钮 | 面板内容 |
+| --- | --- | --- |
+| 有会话在运行 | **进行中** | 只列正在运行的会话，卡片带脉冲状态点 |
+| 没有会话在运行 | **对话总览** | 列出全部可见会话，按更新时间倒序 |
+
+两种模式都会自动排除：已归档会话、空白草稿、子代理会话。行内不显示目录路径。
+
+### 卡片上的操作
+
+鼠标移到卡片上，右上角浮出操作条：
+
+| 操作 | 说明 |
+| --- | --- |
+| 置顶 | 提到本组最前（只影响本面板，记在 cookie + localStorage） |
+| 重命名 | 卡片内就地编辑，Enter 保存 / Esc 取消 |
+| 复制 ID | 复制会话 ID 到剪贴板 |
+| 分叉 | 从当前点创建分支并跳过去 |
+| 停止运行 | 中断当前轮次（仅运行中的卡片出现，需二次确认） |
+| 归档 | 从列表移除（需二次确认） |
+
+点击卡片空白处仍然是打开该会话。
+
+### 自定义卡片按钮
+
+`设置 → 进行中/对话总览` 里的「**卡片按钮**」可以逐项开关操作条上的按钮：置顶 / 重命名 /
+复制 ID / **分叉** / 归档。**默认全开**，改完立即生效。
+
+- **「停止」不在可配置项里**：运行中的卡片永远显示停止按钮，随时能中断 —— 这条不交给
+  配置决定。
+- **全部关掉 = 全部打开**：勾掉最后一个会自动回到全开，操作条不会变成空白（否则像插件坏了）。
+- 配置存在 cookie `dsh_wso_card_actions` + localStorage
+  `dsh.workspace-ranswork.cardActions`（逗号分隔的动作名，如 `pin,rename,copy`）。
+- 没存过配置、或存的值里有不认识的按钮名，都按「全开 / 忽略未知项」处理 —— 以后增删
+  按钮不会让老配置失效。
+
+### 卡片拖动排序（组内）
+
+除了点「置顶」按钮，也可以直接**把卡片拖到组内想要的位置**：
+
+- **只在本组内拖动**：拖到别的组不会生效，也不会改变会话的归属工作区。
+- **拖到组内最前 = 置顶**，卡片出现置顶徽标；把已置顶的卡片拖到非首位（比如中间）= **取消置顶**。
+  拖动置顶和「置顶」按钮写的是**同一份**置顶集合（cookie `dsh_wso_pinned` +
+  localStorage `dsh.workspace-ranswork.pinned`），不会出现两套状态。
+- 拖动时卡片浮起半透明，落点处显示一条虚线指示。
+
+**点击还是拖动？规则是 5 像素**：
+
+1. 按下鼠标时先当作「点击」；
+2. 指针累计位移一旦达到 **5px**，就转成「拖动」—— 而且**不可逆**：即使又拖回原点，
+   松手也不会打开会话；
+3. 松手时，仍在「点击」状态才打开会话；拖动松手只做落位，并屏蔽紧接着的那个 `click`
+   事件（200ms），避免一拖就误开。
+
+键盘行为不变：卡片获得焦点后按 Enter / 空格仍然是打开会话。组标题的拖动（组顺序）和卡片
+拖动互不干扰 —— 拖卡片只认卡片，拖标题只认组。
+
+### 组排序（自动 / 固定）
+
+**默认是「自动」**，组的顺序跟着活跃度走：
+
+1. 有会话在运行的组排在最前（多个运行组之间再比活跃度）；
+2. 其余组按**组活跃度**倒序 —— 取组内可见会话里最新的 `updatedAt`；
+3. 活跃度完全相同的组，保持工作区原始顺序（不抖）；
+4. **「未分组」永远在最后一组**，无论它多活跃。
+
+选「**固定**」则忽略活跃度，完全按工作区原始顺序排列 —— 与 0.1.x 的行为一致。
+
+两种模式都**不改变组内卡片的顺序**：卡片始终按更新时间倒序，置顶的卡片仍在组首。
+
+**在哪设置**：`设置 → 进行中/对话总览`，单选「自动 / 固定」，改完立即生效（写入 cookie +
+localStorage，双保险）。
+
+**老用户升级**：如果你以前手动拖过顺序（存在侧栏面板顺序记录），首次升级会自动落成
+「固定」，顺序原样不动；面板底部会出现一次提示条，点「去设置」可直接跳到设置页。
+不想再看到它，点掉即可 —— 提示不常驻、不占位。
+
+**关于「实时」**：会话流式输出时 `updatedAt` 会毫秒级抖动。如果拿它当排序依据，组会一行
+一行地跳。所以自动模式只在**挂载、运行态翻转、手动刷新**这三个时机重算组序，期间活跃度
+变动不会触发重排。
+
+### 与主题联动
+
+卡片底色与模糊直接消费 `dsh-glass-ranswork`（自定义主题）写在 `body` 上的
+`--dsh-glass-panel-light/dark`、`--dsh-glass-blur`、`--dsh-glass-saturate`。
+没装主题时自动回退到 DSH 原生主题令牌，观感与内置面板一致。
+
+### 数据来源
+
+全部读取 Harness 已有的客户端快照（`useWorkspaces` / `useSessions` 标准 props）与客户端服务
+（`uiWorkspace`、`sessions`）。宿主半侧是空实现：**不新增路由、不轮询、不写任何文件**。
+
+### 安装
+
+```bash
+# 本地目录
+pnpm add link:/path/to/dsh-workspace-ranswork
+
+# 或 tarball
+pnpm add ./dsh-workspace-ranswork-0.3.0.tgz
+```
+
+然后在 Harness 插件管理器里启用该 bundle，刷新 Web UI。
+
+---
+
+## English
+
+### What it does
+
+A sidebar entry that opens a workspace-grouped panel:
+
+- **When something is running** → the button reads *Running* and the panel lists only running sessions.
+- **When nothing is running** → the button reads *Conversations* and the panel lists every visible conversation, newest first.
+
+Archived sessions, blank drafts and subagent sessions are always excluded.
+
+### Card actions
+
+Hover a card to reveal an action strip: **pin** (this panel only), **rename**, **copy session id**,
+**fork**, **stop** (running cards only) and **archive**. Destructive actions ask for confirmation.
+Clicking the card body still opens the session.
+
+### Custom card buttons
+
+The **Card buttons** section of `Settings → Running / Conversations` toggles each button of the
+action strip on or off: pin / rename / copy id / **fork** / archive. **All are on by default** and
+changes apply immediately.
+
+- **“Stop” is not configurable**: running cards always show it, so you can always interrupt a run.
+- **All off = all on**: unchecking the last one falls back to everything on, so the strip is never
+  empty (an empty strip looks like a broken plugin).
+- Stored in cookie `dsh_wso_card_actions` + localStorage
+  `dsh.workspace-ranswork.cardActions` as a comma-separated list of action names (e.g.
+  `pin,rename,copy`).
+- A missing config, or one containing unknown names, means “all on / ignore the unknown ones”, so
+  adding or removing buttons later never invalidates an old config.
+
+### Drag cards within a group
+
+Besides the pin button, you can **drag a card to the position you want inside its group**:
+
+- **Within the owning group only**: dropping into another group does nothing and never changes the
+  session's workspace.
+- **Dropping at the top of the group pins it** (a pin badge appears); dragging an already-pinned
+  card to a non-first position **unpins it**. Drag-to-pin and the pin button share the **same**
+  pinned set (cookie `dsh_wso_pinned` + localStorage `dsh.workspace-ranswork.pinned`) — there is
+  only ever one source of truth.
+- While dragging, the card is lifted and semi-transparent, and a dashed indicator marks the drop
+  position.
+
+**Click or drag? The threshold is 5 pixels:**
+
+1. Pressing the mouse starts as a *click*;
+2. Once the pointer has moved **5px** in total it becomes a *drag* — **irreversibly**: dragging back
+   to the origin and releasing does not open the session;
+3. On release, a click opens the session; a drag only commits the drop and suppresses the trailing
+   `click` event (200ms) so a drag never opens a session by accident.
+
+Keyboard behaviour is unchanged: focus a card and press Enter / Space to open it. Card dragging and
+header dragging (group order) do not interfere — a card drag only reacts to cards, a header drag only
+to groups.
+
+### Group order (Auto / Fixed)
+
+**The default is Auto**, where group order follows activity:
+
+1. Groups with a running session come first (among themselves, ordered by activity);
+2. The remaining groups are ordered by **group activity** — the newest `updatedAt` among the
+   group's visible sessions — newest first;
+3. Groups with exactly the same activity keep their original workspace order (no jitter);
+4. **“Ungrouped” is always the last group**, however active it is.
+
+**Fixed** ignores activity and always uses the original workspace order — the 0.1.x behaviour.
+
+Neither mode reorders the cards inside a group: cards stay newest-first, and pinned cards stay
+at the top of their group.
+
+**Where to change it**: `Settings → Running / Conversations`, a single Auto / Fixed radio. The
+change applies immediately and is stored in both a cookie and localStorage.
+
+**Upgrading from 0.1.x**: if you had previously dragged a manual order (a sidebar panel-order
+record exists), the first launch switches you to **Fixed** and your order stays exactly as it
+was. A one-time hint appears at the bottom of the panel with an “Open settings” link; dismiss it
+and it never comes back. The hint is not persistent and reserves no space.
+
+**About “live” ordering**: `updatedAt` churns on a millisecond scale while a session streams.
+Sorting on it directly would make groups jump around row by row. Auto therefore recomputes the
+group order only on mount, on a running-state flip, and on an explicit refresh.
+
+### Theme integration
+
+Card surfaces and blur consume the `dsh-glass-ranswork` custom-theme variables
+(`--dsh-glass-panel-light/dark`, `--dsh-glass-blur`, `--dsh-glass-saturate`) with graceful
+fallbacks to the stock DSH theme tokens.
+
+### Data
+
+Reads existing client snapshots and services only. The host half is intentionally empty:
+no new routes, no polling, no files written.
+
+### Install
+
+```bash
+pnpm add link:/path/to/dsh-workspace-ranswork
+# or
+pnpm add ./dsh-workspace-ranswork-0.3.0.tgz
+```
+
+Enable the bundle in the Harness plugin manager, then refresh the Web UI.
+
+---
+
+## License
+
+MIT © rans725
