@@ -39,6 +39,37 @@ git push -u origin main
 > 开发副本在 `F:\work\插件\dsh-workspace-ranswork`；这里是**发布快照**。
 > 改了代码要重新从开发目录复制过来，再提交。
 
+> **⚠️ 本机 git 配了代理 `http://127.0.0.1:7890`，但代理常常没开**（2026-10-24 实测）。
+> 症状是这个误导性的报错 —— 看着像没凭据，其实是连不上代理：
+> `Failed to connect to github.com:443 over proxy 127.0.0.1 … Could not connect to server`
+> 先试直连；直连通（`curl --noproxy '*' https://github.com` 回 200）就临时绕过代理，
+> **别去改全局配置**：
+>
+> ```bash
+> git -c http.proxy= -c https.proxy= push origin main
+> git -c http.proxy= -c https.proxy= push origin v0.4.1
+> ```
+
+### 发版三件套（每次都要）
+
+```bash
+# 1. 从开发目录同步代码（只同步真正改过的文件）
+cp /f/work/插件/dsh-workspace-ranswork/{client.js,package.json} .
+cp /f/work/插件/dsh-workspace-ranswork/locale/{zh,en}.json locale/
+
+# 2. 测试 + 打包自检（在发布目录里跑，确认发出去的就是测过的）
+npm pack --dry-run     # 必须仍是 9 个文件，版本号对
+
+# 3. 提交 + 打附注 tag + 推两者
+git commit -am "fix: … (vX.Y.Z)"
+git tag -a vX.Y.Z -F <发行说明文件>
+git -c http.proxy= -c https.proxy= push origin main
+git -c http.proxy= -c https.proxy= push origin vX.Y.Z
+```
+
+> 打 tag 时**正文第一行要写标题**（`vX.Y.Z: 一句话`）：`-F` 会把整个文件当 tag 说明，
+> 没有标题行的话 `git tag -n` 显示的就是正文第一段 Markdown，很难看。
+
 先在 GitHub 上**新建空仓库** `dsh-workspace-ranswork`（不要勾选 README/LICENSE，
 否则要先 pull）。
 
@@ -70,11 +101,11 @@ rm -f .npmrc-pub
 ```bash
 # a) 版本元数据（几乎立刻可查）
 curl -s -o /dev/null -w "%{http_code}\n" \
-  https://registry.npmjs.org/dsh-workspace-ranswork/0.4.0
+  https://registry.npmjs.org/dsh-workspace-ranswork/0.4.1
 
 # b) tarball —— 这个会延迟 10~60 秒，404 就先等等，别急着判失败
 curl -s -o /dev/null -w "%{http_code}\n" \
-  https://registry.npmjs.org/dsh-workspace-ranswork/-/dsh-workspace-ranswork-0.4.0.tgz
+  https://registry.npmjs.org/dsh-workspace-ranswork/-/dsh-workspace-ranswork-0.4.1.tgz
 
 # c) 真实安装（最有说服力）
 mkdir -p /tmp/it && cd /tmp/it && echo '{"name":"t","version":"1.0.0"}' > package.json
@@ -91,10 +122,10 @@ pnpm add dsh-workspace-ranswork && cat node_modules/dsh-workspace-ranswork/packa
 pnpm add dsh-workspace-ranswork
 
 # 固定版本
-pnpm add dsh-workspace-ranswork@0.4.0
+pnpm add dsh-workspace-ranswork@0.4.1
 
 # 不想用 npm 时（能装，但收不到更新提醒）
-pnpm add https://github.com/rans725/dsh-workspace-ranswork/archive/refs/tags/v0.4.0.tar.gz
+pnpm add https://github.com/rans725/dsh-workspace-ranswork/archive/refs/tags/v0.4.1.tar.gz
 ```
 
 > **⚠️ 为什么推荐 npm**：从 Release 附件 URL 或 tag 归档装的包，插件市场**永远**报"无更新"。
