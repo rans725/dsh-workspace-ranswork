@@ -105,10 +105,10 @@ window.__ModuleLoader__.load({
       groupOrderGo: '去设置',
       nav: '进行中/对话总览',
       pageTitle: '进行中/对话总览',
-      pageDesc: '选择工作区分组的排列方式。自动按活跃度排序：正在运行的组置顶，其余按最近活动时间从新到旧，「未分组」始终在最后。',
+      pageDesc: '选择排列方式。自动按活跃度排序：会话卡片按最近活动时间从新到旧铺成一条列表，「未分组」始终在最后；固定则沿用你自己拖出来的顺序。',
       modeLabel: '组排序',
       modeAuto: '自动',
-      modeAutoDesc: '最新活跃的组置顶，有运行中会话的组优先，「未分组」排在最后。',
+      modeAutoDesc: '最新活跃的那张卡排最前（跨工作区一起比），「未分组」排在最后。',
       modeFixed: '固定',
       modeFixedDesc: '忽略活跃度，始终按工作区的原始顺序排列。',
       cardActionsTitle: '卡片按钮',
@@ -166,10 +166,10 @@ window.__ModuleLoader__.load({
       groupOrderGo: 'Open settings',
       nav: 'Running / Conversations',
       pageTitle: 'Running / Conversations',
-      pageDesc: 'Choose how workspace groups are ordered. Auto sorts by activity: groups with a running session first, then by most recent activity, with “Ungrouped” always last.',
+      pageDesc: 'Choose how cards are ordered. Auto sorts by activity: cards run from most to least recently active across all workspaces, with “Ungrouped” always last; Fixed keeps the order you dragged into place.',
       modeLabel: 'Group order',
       modeAuto: 'Auto',
-      modeAutoDesc: 'The most recently active group goes first, running groups lead, and “Ungrouped” stays last.',
+      modeAutoDesc: 'The most recently active card goes first (compared across workspaces), and “Ungrouped” stays last.',
       modeFixed: 'Fixed',
       modeFixedDesc: 'Ignore activity and always keep the original workspace order.',
       cardActionsTitle: 'Card buttons',
@@ -843,6 +843,11 @@ window.__ModuleLoader__.load({
       React.useEffect(() => subscribeOrderReset(() => {
         setFreeOrder(readOrder());
         setGroupAuto(readGroupAuto());
+        // 0.4.1：切到「自动」时设置页会连带清掉置顶记录，本实例的 pinnedIds
+        // 也得跟着重读，否则图钉还挂着、自动模式却已经不看它了。
+        setPinnedIds(readPinned());
+        // 顺序被重置了，「刚拖完」的优先级也一并作废。
+        dragOrderRef.current = null;
       }), []);
       // 一次性升级提示：仅当「迁成固定」且本地确有手动顺序记录时出现。
       // readGroupAuto() 的迁移分支已经写过开关，这里再读只会命中已存值，不会重复落盘。
@@ -862,6 +867,18 @@ window.__ModuleLoader__.load({
 
       const pinned = React.useMemo(() => new Set(pinnedIds), [pinnedIds]);
 
+      /**
+       * 「刚拖完」标记（0.4.1）。
+       *
+       * 自动模式下顺序整体按活跃度，但用户**当场拖**出来的位置必须立刻生效，
+       * 否则拖完一渲染就被活跃度弹回原位，看起来像「自动模式下拖不动」。
+       * 这里记下最后一次拖拽落盘的顺序快照：只要 `freeOrder` 还等于它，
+       * 就认为「这是用户刚摆好的」，优先显示；任何其它更新（切换模式、
+       * 重新挂载、新会话进来）都会让 `freeOrder` 与快照脱钩或直接清空，
+       * 于是自动回到纯活跃度排序。
+       */
+      const dragOrderRef = React.useRef(null);
+
       const built = buildOverview(
         Array.isArray(workspaces) ? workspaces : EMPTY_ITEMS,
         sessionState ?? EMPTY_STATE,
@@ -880,7 +897,16 @@ window.__ModuleLoader__.load({
       // 0.3.2：面板改成**一个平坦列表**，不再按工作区分块。
       // 工作区归属仍然参与「有哪些卡片」（buildOverview 决定），只是不再决定
       // 卡片在哪一块、能不能互相拖动。
-      // 默认顺序 = 各组按现有排序依次摊平（保持原有观感），再把自由排序叠上去。
+      //
+      // 0.4.1（用户报「设置自动以后，最后活跃的没排前面」）：
+      // 这里原来**无条件**按组摊平 —— 结果是「组内按活跃度、组间按组序」，
+      // 于是 A 组两个会话会把 B 组那个刚更新的会话挡在下面，看起来就是
+      // 「最后活跃的没排前面」。自动模式必须**整表**按活跃度排。
+      //
+      //   自动：所有卡按 updatedAt 倒序（平局保持摊平顺序，稳定），
+      //         **但 `__ungrouped__` 仍然恒排末尾** —— 这是 17.18 定死的规则，
+      //         不能被活跃度顶到前面去。
+      //   固定：保持按组摊平的原始观感，再交给下面的自由顺序 / 置顶。
       const flat = React.useMemo(() => {
         const rows = [];
         const seenIds = new Set();
@@ -891,14 +917,60 @@ window.__ModuleLoader__.load({
             rows.push(row);
           }
         }
-        return rows;
+        if (groupAuto !== true) return rows;
+        // 「未分组」的 id 集合：这些卡无论多新都排在最后。
+        // 注意 `__ungrouped__` 是**哨兵 key**，理论上某个工作区自称这个 id 也能撞上；
+        // 只认最后一个（stray 分支永远最后 push），避免把真工作区的卡误沉底。
+        const strayIds = new Set();
+        const strayGroups = (Array.isArray(groups) ? groups : [])
+          .filter((group) => group?.key === '__ungrouped__');
+        const strayGroup = strayGroups[strayGroups.length - 1];
+        for (const row of Array.isArray(strayGroup?.rows) ? strayGroup.rows : []) {
+          strayIds.add(row.id);
+        }
+        // 没有未分组时（或撞名时）不要白跑一遍排序分支。
+        if (strayIds.size === 0) {
+          return rows.slice().sort((a, b) => (b?.updatedAt ?? 0) - (a?.updatedAt ?? 0));
+        }
+        // Array.prototype.sort 稳定：updatedAt 相同的卡保持原摊平先后。
+        return rows.slice().sort((a, b) => {
+          const aStray = strayIds.has(a.id) ? 1 : 0;
+          const bStray = strayIds.has(b.id) ? 1 : 0;
+          if (aStray !== bStray) return aStray - bStray;
+          return (b?.updatedAt ?? 0) - (a?.updatedAt ?? 0);
+        });
       }, [signature, groupAuto, built]);
 
-      /** 面板实际展示顺序：置顶在前，其余按用户拖出来的自由顺序。 */
-      const panelOrder = React.useMemo(
-        () => applyPinnedOrder(flat, pinned, freeOrder),
-        [flat, pinned, freeOrder],
-      );
+      /**
+       * 面板实际展示顺序。
+       *
+       * 0.4.1（用户报「设置自动以后，最后活跃的没排前面」）：**自动模式下列表
+       * 整体按活跃度排**（见上面 `flat`），不再让**旧的**置顶 / 手动顺序插队。
+       *
+       * 之前这里无条件走 `applyPinnedOrder`，于是出现两种「设了自动却不自动」：
+       *   1. 置顶过的卡（pinned 记录是永久的）永远压在最前，哪怕它早已不活跃；
+       *   2. 拖过一次卡留下的 ORDER_KEY 是**永久快照**，新活动哪怕刚更新也只会
+       *      被「追加到末尾」（见 applyFreeOrder 的 fresh 分支）。
+       * 两种情况都让用户看到「最后活跃的排在后面」，而且光靠设置页点一下
+       * 「自动」也救不回来 —— 它只清存储里的自由顺序，pinned 依然压着。
+       *
+       * 但**用户当场拖出来的顺序仍然生效**（`丁`：刚拖完又被活跃度弹回去，
+       * 等于拖不动）。区分办法是 `dragSeq`：开始拖动时递增，拖完写顺序后
+       * 面板仍带着这个序号渲染；只有序号变了（切模式 / 重挂载 / 活跃度重排
+       * 后的新会话）才回到纯活跃度。
+       *
+       * 固定模式保持老行为（置顶在前 + 自由顺序），那是用户自己排的顺序。
+       * 置顶**标记**（图钉）与排序无关，照旧显示。
+       */
+      const panelOrder = React.useMemo(() => {
+        if (groupAuto !== true) return applyPinnedOrder(flat, pinned, freeOrder);
+        // 用户刚拖完的那一版顺序：仍然照用（不然拖完立刻被弹回原位）。
+        const frozen = dragOrderRef.current;
+        const fresh = frozen !== null
+          && Array.isArray(freeOrder) && freeOrder.length > 0
+          && frozen.join(',') === freeOrder.join(',');
+        return fresh ? applyPinnedOrder(flat, pinned, freeOrder) : flat.slice();
+      }, [flat, pinned, freeOrder, groupAuto]);
 
       const open = (id) => {
         setFailure('');
@@ -1126,6 +1198,9 @@ window.__ModuleLoader__.load({
         writePinned(nextPinned);
         setFreeOrder(order);
         writeOrder(order);
+        // 0.4.1：记下「这是用户刚摆好的顺序」，自动模式下优先显示它，
+        // 直到有别的更新把它顶掉（见 panelOrder 的说明）。
+        dragOrderRef.current = order.slice();
       };
 
       const onCardPointerDown = (id, event) => {
@@ -2732,6 +2807,10 @@ window.__ModuleLoader__.load({
         // 见到自由顺序就原样返回）。切模式是用户明确要求换一种排法，
         // 所以顺手清掉手动顺序，否则设置页点了没反应。
         writeOrder([]);
+        // 0.4.1：置顶记录同样是**永久**的，固定模式下它会一直被提到最前。
+        // 切到「自动」时一并清掉，否则「自动」名不副实：
+        // 面板虽然改按活跃度排，置顶的旧卡仍插在最前面（用户报的正是这个）。
+        if (value === true) writePinned([]);
         notifyOrderReset();
       };
 

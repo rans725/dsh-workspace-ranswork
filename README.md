@@ -10,7 +10,7 @@
 
 ### 它做什么
 
-侧边栏多一个入口，主面板按工作区分组展示会话：
+侧边栏多一个入口，主面板把会话铺成一条扁平卡片列表（不再按工作区分块）：
 
 | 状态 | 侧栏按钮 | 面板内容 |
 | --- | --- | --- |
@@ -25,7 +25,7 @@
 
 | 操作 | 说明 |
 | --- | --- |
-| 置顶 | 提到本组最前（只影响本面板，记在 cookie + localStorage） |
+| 置顶 | 固定模式下提到最前（自动模式下只是个标记，排序按活跃度；记在 cookie + localStorage） |
 | 重命名 | 卡片内就地编辑，Enter 保存 / Esc 取消 |
 | 复制 ID | 复制会话 ID 到剪贴板 |
 | 分叉 | 从当前点创建分支并跳过去 |
@@ -79,18 +79,22 @@
 
 `prefers-reduced-motion: reduce` 的用户不播放让位动画（位置直接到位）。
 
-### 组排序（自动 / 固定）
+### 排序（自动 / 固定）
 
-**默认是「自动」**，组的顺序跟着活跃度走：
+**默认是「自动」**：整张列表按**最后活跃**从新到旧排 —— **跨工作区一起比**，
+不是先按工作区分块再各自排。
 
-1. 有会话在运行的组排在最前（多个运行组之间再比活跃度）；
-2. 其余组按**组活跃度**倒序 —— 取组内可见会话里最新的 `updatedAt`；
-3. 活跃度完全相同的组，保持工作区原始顺序（不抖）；
-4. **「未分组」永远在最后一组**，无论它多活跃。
+> 0.4.1 修的问题：以前自动模式其实是「组内按活跃度、组间按组序」，所以 A 组的旧会话
+> 会把 B 组刚更新的会话压在下面，看起来就是「设了自动，最后活跃的没排前面」。另外置顶
+> 记录和拖过一次留下的旧顺序都是**永久**的，会无条件插队。现在自动模式这三样都不看了。
 
-选「**固定**」则忽略活跃度，完全按工作区原始顺序排列 —— 与 0.1.x 的行为一致。
+- 自动模式下**置顶只是个标记**，不会把卡提到最前；切到「自动」还会顺带清掉置顶记录。
+- 自动模式下**拖拽仍然立刻生效**（你刚摆好的位置不会被活跃度立刻弹回去），但下一次
+  活跃度变化（挂载 / 运行态翻转 / 手动刷新）就回到按活跃度排。
+- **「未分组」永远排在最后**，无论它多活跃。
 
-两种模式都**不改变组内卡片的顺序**：卡片始终按更新时间倒序，置顶的卡片仍在组首。
+选「**固定**」则完全按你自己排的顺序来：置顶的卡在前面，其余按拖动顺序 ——
+与 0.1.x 的行为一致。
 
 **在哪设置**：`设置 → 进行中/对话总览`，单选「自动 / 固定」，改完立即生效（写入 cookie +
 localStorage，双保险）。
@@ -99,8 +103,8 @@ localStorage，双保险）。
 「固定」，顺序原样不动；面板底部会出现一次提示条，点「去设置」可直接跳到设置页。
 不想再看到它，点掉即可 —— 提示不常驻、不占位。
 
-**关于「实时」**：会话流式输出时 `updatedAt` 会毫秒级抖动。如果拿它当排序依据，组会一行
-一行地跳。所以自动模式只在**挂载、运行态翻转、手动刷新**这三个时机重算组序，期间活跃度
+**关于「实时」**：会话流式输出时 `updatedAt` 会毫秒级抖动。如果拿它当排序依据，列表会一行
+一行地跳。所以自动模式只在**挂载、运行态翻转、手动刷新**这三个时机重算顺序，期间活跃度
 变动不会触发重排。
 
 ### 与主题联动
@@ -144,7 +148,7 @@ pnpm add link:/path/to/dsh-workspace-ranswork
 
 ### What it does
 
-A sidebar entry that opens a workspace-grouped panel:
+A sidebar entry that opens one flat card list (no per-workspace sections):
 
 - **When something is running** → the button reads *Running* and the panel lists only running sessions.
 - **When nothing is running** → the button reads *Conversations* and the panel lists every visible conversation, newest first.
@@ -178,8 +182,9 @@ Besides the pin button, you can **drag a card to the position you want inside it
 
 - **Within the owning group only**: dropping into another group does nothing and never changes the
   session's workspace.
-- **Dropping at the top of the group pins it** (a pin badge appears); dragging an already-pinned
-  card to a non-first position **unpins it**. Drag-to-pin and the pin button share the **same**
+- **Dropping at the top pins it** (a pin badge appears); dragging an already-pinned
+  card to a non-first position keeps the pin as a marker only. Pin ordering applies in **Fixed**
+  mode — in Auto the list stays activity-ordered. Drag-to-pin and the pin button share the **same**
   pinned set (cookie `dsh_wso_pinned` + localStorage `dsh.workspace-ranswork.pinned`) — there is
   only ever one source of truth.
 - While dragging, the card is lifted and semi-transparent, and a dashed indicator marks the drop
@@ -197,20 +202,26 @@ Keyboard behaviour is unchanged: focus a card and press Enter / Space to open it
 header dragging (group order) do not interfere — a card drag only reacts to cards, a header drag only
 to groups.
 
-### Group order (Auto / Fixed)
+### Ordering (Auto / Fixed)
 
-**The default is Auto**, where group order follows activity:
+**The default is Auto**: the whole list runs from most to least recently active — compared
+**across all workspaces**, not grouped by workspace first and sorted within each group.
 
-1. Groups with a running session come first (among themselves, ordered by activity);
-2. The remaining groups are ordered by **group activity** — the newest `updatedAt` among the
-   group's visible sessions — newest first;
-3. Groups with exactly the same activity keep their original workspace order (no jitter);
-4. **“Ungrouped” is always the last group**, however active it is.
+> What 0.4.1 fixed: Auto used to be "sorted within a group, but groups ordered by group". So an
+> older conversation from workspace A could sit above a conversation in workspace B that had just
+> been updated — exactly the "I set Auto but the most recent one isn't first" report. On top of
+> that, pins and any order left over from a past drag were **permanent** and always jumped the
+> queue. Auto now ignores all three.
 
-**Fixed** ignores activity and always uses the original workspace order — the 0.1.x behaviour.
+- In Auto, **a pin is only a marker** — it does not hoist the card. Switching to Auto also clears
+  the pin records.
+- In Auto, **a drag still applies immediately** (your freshly dropped position is not bounced
+  straight back by activity), but the next activity change (mount / running-state flip / explicit
+  refresh) returns the list to activity order.
+- **“Ungrouped” is always last**, however active it is.
 
-Neither mode reorders the cards inside a group: cards stay newest-first, and pinned cards stay
-at the top of their group.
+**Fixed** keeps exactly the order you arranged: pinned cards first, then the rest in drag order —
+the 0.1.x behaviour.
 
 **Where to change it**: `Settings → Running / Conversations`, a single Auto / Fixed radio. The
 change applies immediately and is stored in both a cookie and localStorage.
@@ -221,8 +232,8 @@ was. A one-time hint appears at the bottom of the panel with an “Open settings
 and it never comes back. The hint is not persistent and reserves no space.
 
 **About “live” ordering**: `updatedAt` churns on a millisecond scale while a session streams.
-Sorting on it directly would make groups jump around row by row. Auto therefore recomputes the
-group order only on mount, on a running-state flip, and on an explicit refresh.
+Sorting on it directly would make the list jump around row by row. Auto therefore recomputes the
+order only on mount, on a running-state flip, and on an explicit refresh.
 
 ### Theme integration
 
