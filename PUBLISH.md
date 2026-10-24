@@ -47,7 +47,7 @@ git push -u origin main
 >
 > ```bash
 > git -c http.proxy= -c https.proxy= push origin main
-> git -c http.proxy= -c https.proxy= push origin v0.4.1
+> git -c http.proxy= -c https.proxy= push origin v0.4.3
 > ```
 
 ### 发版三件套（每次都要）
@@ -101,11 +101,11 @@ rm -f .npmrc-pub
 ```bash
 # a) 版本元数据（几乎立刻可查）
 curl -s -o /dev/null -w "%{http_code}\n" \
-  https://registry.npmjs.org/dsh-workspace-ranswork/0.4.1
+  https://registry.npmjs.org/dsh-workspace-ranswork/0.4.3
 
 # b) tarball —— 这个会延迟 10~60 秒，404 就先等等，别急着判失败
 curl -s -o /dev/null -w "%{http_code}\n" \
-  https://registry.npmjs.org/dsh-workspace-ranswork/-/dsh-workspace-ranswork-0.4.1.tgz
+  https://registry.npmjs.org/dsh-workspace-ranswork/-/dsh-workspace-ranswork-0.4.3.tgz
 
 # c) 真实安装（最有说服力）
 mkdir -p /tmp/it && cd /tmp/it && echo '{"name":"t","version":"1.0.0"}' > package.json
@@ -122,10 +122,10 @@ pnpm add dsh-workspace-ranswork && cat node_modules/dsh-workspace-ranswork/packa
 pnpm add dsh-workspace-ranswork
 
 # 固定版本
-pnpm add dsh-workspace-ranswork@0.4.1
+pnpm add dsh-workspace-ranswork@0.4.3
 
 # 不想用 npm 时（能装，但收不到更新提醒）
-pnpm add https://github.com/rans725/dsh-workspace-ranswork/archive/refs/tags/v0.4.1.tar.gz
+pnpm add https://github.com/rans725/dsh-workspace-ranswork/archive/refs/tags/v0.4.3.tar.gz
 ```
 
 > **⚠️ 为什么推荐 npm**：从 Release 附件 URL 或 tag 归档装的包，插件市场**永远**报"无更新"。

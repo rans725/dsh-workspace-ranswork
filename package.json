@@ -1,6 +1,6 @@
 {
   "name": "dsh-workspace-ranswork",
-  "version": "0.4.1",
+  "version": "0.4.3",
   "type": "module",
   "description": "Workspace overview for DeepSeek Harness: a sidebar panel that switches between running tasks and all conversations, shown as one freely sortable card list, with per-card actions (pin / rename / copy id / fork / stop / archive).",
   "icon": "./icon.svg",
@@ -43,7 +43,9 @@
     "locale/*.json"
   ],
   "dsh": {
-    "bundle": { "patch": "./cordis.patch.yml" },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
     "client": {
       "platform": "web",
       "immediately": true,

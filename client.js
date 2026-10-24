@@ -100,25 +100,25 @@ window.__ModuleLoader__.load({
       cancel: '取消',
       copied: '已复制会话 ID',
       actionFailed: '操作失败：{error}',
-      pinBadge: '置顶',
+      pinBadge: '已置顶',
       groupOrderHint: '组顺序已固定（沿用你原来的手动顺序）。',
       groupOrderGo: '去设置',
       nav: '进行中/对话总览',
       pageTitle: '进行中/对话总览',
-      pageDesc: '选择排列方式。自动按活跃度排序：会话卡片按最近活动时间从新到旧铺成一条列表，「未分组」始终在最后；固定则沿用你自己拖出来的顺序。',
+      pageDesc: '选择排列方式。置顶的卡片始终排在最前；自动＝其余按最近活动时间从新到旧铺成一条列表，「未分组」始终在最后；固定＝其余沿用你自己拖出来的顺序。',
       modeLabel: '组排序',
       modeAuto: '自动',
-      modeAutoDesc: '最新活跃的那张卡排最前（跨工作区一起比），「未分组」排在最后。',
+      modeAutoDesc: '置顶的卡片排最前，其余按最新活跃倒序（跨工作区一起比），「未分组」排在最后。',
       modeFixed: '固定',
-      modeFixedDesc: '忽略活跃度，始终按工作区的原始顺序排列。',
+      modeFixedDesc: '忽略活跃度：置顶在前，其余按你拖出来的顺序。',
       cardActionsTitle: '卡片按钮',
       cardActionsLabel: '卡片按钮',
       cardActionsDesc: '选择卡片悬浮操作条上显示哪些按钮，改完立即生效。',
       cardActionsStopNote: '「停止」按钮不在此列：运行中的卡片始终显示，随时可以中断。',
       cardActionsEmptyNote: '全部取消勾选会恢复为全开，不会出现空操作条。',
-      cardActionsDragNote: '提示：卡片可以在所属组内直接拖动排序，拖到组内最前即置顶，拖回非首位则取消置顶。',
+      cardActionsDragNote: '提示：卡片可以直接拖动排序，拖到最前即置顶；把置顶卡拖到其它位置会自动取消置顶。',
       act_pin: '置顶',
-      act_pinDesc: '把卡片提到本组最前（只影响本面板）。',
+      act_pinDesc: '把卡片提到最前（只影响本面板）。',
       act_rename: '重命名',
       act_renameDesc: '在卡片内就地修改标题。',
       act_copy: '复制会话 ID',
@@ -166,20 +166,20 @@ window.__ModuleLoader__.load({
       groupOrderGo: 'Open settings',
       nav: 'Running / Conversations',
       pageTitle: 'Running / Conversations',
-      pageDesc: 'Choose how cards are ordered. Auto sorts by activity: cards run from most to least recently active across all workspaces, with “Ungrouped” always last; Fixed keeps the order you dragged into place.',
+      pageDesc: 'Choose how cards are ordered. Pinned cards always come first; Auto orders the rest by activity (most recently active first, across all workspaces), with “Ungrouped” always last; Fixed keeps the rest in the order you dragged into place.',
       modeLabel: 'Group order',
       modeAuto: 'Auto',
-      modeAutoDesc: 'The most recently active card goes first (compared across workspaces), and “Ungrouped” stays last.',
+      modeAutoDesc: 'Pinned cards first, then the rest from most to least recently active (compared across workspaces), and “Ungrouped” stays last.',
       modeFixed: 'Fixed',
-      modeFixedDesc: 'Ignore activity and always keep the original workspace order.',
+      modeFixedDesc: 'Ignore activity: pinned first, then the rest in the order you dragged into place.',
       cardActionsTitle: 'Card buttons',
       cardActionsLabel: 'Card buttons',
       cardActionsDesc: 'Choose which buttons appear in the card action strip. Changes apply immediately.',
       cardActionsStopNote: '“Stop” is not in this list: running cards always show it so you can interrupt at any time.',
       cardActionsEmptyNote: 'Unchecking everything falls back to all-on, so the action strip is never empty.',
-      cardActionsDragNote: 'Tip: cards can be dragged within their own group. Drop one at the top of the group to pin it; drop it anywhere else to unpin it.',
+      cardActionsDragNote: 'Tip: drag cards to reorder them. Dropping one at the very top pins it; dragging a pinned card anywhere else unpins it.',
       act_pin: 'Pin',
-      act_pinDesc: 'Move the card to the top of its group (this panel only).',
+      act_pinDesc: 'Move the card to the very top (this panel only).',
       act_rename: 'Rename',
       act_renameDesc: 'Edit the title in place on the card.',
       act_copy: 'Copy session ID',
@@ -247,7 +247,10 @@ window.__ModuleLoader__.load({
       '.dsh-wso-act:focus-visible{outline:2px solid color-mix(in srgb,var(--dsw-alias-brand-primary,var(--dsw-brand-primary,#247bbf)) 62%,transparent);outline-offset:1px}',
       '.dsh-wso-act.is-danger:hover{background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 16%,transparent);color:var(--dsw-alias-state-error-primary)}',
       '.dsh-wso-act:disabled{opacity:.4;cursor:default}',
-      '.dsh-wso-act.is-on{color:var(--dsw-alias-brand-primary,var(--dsw-brand-primary,#247bbf))}',
+      // 已激活的按钮（目前只有「置顶」）不能只换字色：整块染上品牌色 + 内描边，
+      // 一眼就是「它现在是开着的」。
+      '.dsh-wso-act.is-on{background:color-mix(in srgb,var(--dsw-alias-brand-primary,var(--dsw-brand-primary,#247bbf)) 16%,transparent);color:var(--dsw-alias-brand-primary,var(--dsw-brand-primary,#247bbf));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--dsw-alias-brand-primary,var(--dsw-brand-primary,#247bbf)) 34%,transparent)}',
+      '.dsh-wso-act.is-on:hover{background:color-mix(in srgb,var(--dsw-alias-brand-primary,var(--dsw-brand-primary,#247bbf)) 26%,transparent);color:var(--dsw-alias-brand-primary,var(--dsw-brand-primary,#247bbf))}',
 
       // 二次确认：直接替换操作条内容，避免再弹一层。
       '.dsh-wso-confirm{display:flex;align-items:center;gap:4px;padding:0 2px 0 8px;font-size:11px;line-height:16px;color:var(--dsw-alias-label-secondary);white-space:nowrap}',
@@ -260,8 +263,16 @@ window.__ModuleLoader__.load({
       '.dsh-wso-rename-input{box-sizing:border-box;flex:1 1 auto;min-width:0;height:26px;padding:0 8px;border:1px solid var(--dsw-alias-border-l1);border-radius:7px;background:var(--dsw-alias-bg-layer-1,var(--dsw-alias-bg-layer-2));color:var(--dsw-alias-label-primary);font:inherit;font-size:12px;outline:none}',
       '.dsh-wso-rename-input:focus{border-color:color-mix(in srgb,var(--dsw-alias-brand-primary,var(--dsw-brand-primary,#247bbf)) 55%,var(--dsw-alias-border-l2))}',
 
-      // 置顶标记
-      '.dsh-wso-pin{flex:none;display:inline-flex;color:var(--dsw-alias-brand-primary,var(--dsw-brand-primary,#247bbf))}',
+      // ---- 置顶标记 ----------------------------------------------------------
+      // 置顶要有「整张卡都变了」的量感，不能只靠右上角一个小图钉（它还正好被
+      // 悬浮操作条盖住）：卡片左侧品牌色竖条 + 边框同色，鼠标移开也一眼能看到。
+      '.dsh-wso-row.is-pinned{border-color:color-mix(in srgb,var(--dsw-alias-brand-primary,var(--dsw-brand-primary,#247bbf)) 40%,var(--dsw-alias-border-l2))}',
+      '.dsh-wso-row.is-pinned:hover{border-color:color-mix(in srgb,var(--dsw-alias-brand-primary,var(--dsw-brand-primary,#247bbf)) 58%,var(--dsw-alias-border-l2))}',
+      '.dsh-wso-row.is-pinned:before{position:absolute;top:0;bottom:0;left:0;width:3px;content:"";border-radius:0 3px 3px 0;background:linear-gradient(180deg,color-mix(in srgb,var(--dsw-alias-brand-primary,var(--dsw-brand-primary,#247bbf)) 82%,transparent),color-mix(in srgb,var(--dsw-alias-brand-primary,var(--dsw-brand-primary,#247bbf)) 30%,transparent))}',
+      '.dsh-wso-row.is-dragging:before{display:none}',
+      // 图钉角标：品牌色小胶囊 + 出现时的弹入动画（从「无」到「有」的动作本身就是反馈）。
+      '.dsh-wso-pin{flex:none;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;margin:-3px -4px -3px 0;border-radius:6px;background:color-mix(in srgb,var(--dsw-alias-brand-primary,var(--dsw-brand-primary,#247bbf)) 15%,transparent);color:var(--dsw-alias-brand-primary,var(--dsw-brand-primary,#247bbf));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--dsw-alias-brand-primary,var(--dsw-brand-primary,#247bbf)) 24%,transparent);animation:dsh-wso-pin-in .26s cubic-bezier(.2,1.5,.45,1)}',
+      '@keyframes dsh-wso-pin-in{from{opacity:0;transform:scale(.55) rotate(-28deg)}to{opacity:1;transform:none}}',
       '.dsh-wso-toast{margin:10px 2px 0;font-size:12px;line-height:17px;color:var(--dsw-alias-label-secondary)}',
 
       // ---- 空状态 ------------------------------------------------------------
@@ -317,7 +328,7 @@ window.__ModuleLoader__.load({
       '.dsh-wso-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:22px 2px 0;color:var(--dsw-alias-label-tertiary);font-size:11.5px;line-height:17px}',
 
       '@media (max-width:720px){.dsh-wso-wrap{padding:28px 16px 56px}.dsh-wso-title{font-size:22px}.dsh-wso-rows{grid-template-columns:1fr}.dsh-wso-row{min-height:96px;padding:12px 13px}}',
-      '@media (prefers-reduced-motion:reduce){.dsh-wso-dot.is-live:after{animation:none}.dsh-wso-row{transition:none}}',
+      '@media (prefers-reduced-motion:reduce){.dsh-wso-dot.is-live:after{animation:none}.dsh-wso-pin{animation:none}.dsh-wso-row{transition:none}}',
 
       // ---- 侧栏「全局面板」行拖动排序（只作用于打了 data 标记的行）-----------
       // 内置侧栏的行样式不带 cursor / 选中控制，这里补「可拖」的手感；
@@ -525,7 +536,28 @@ window.__ModuleLoader__.load({
     const RenameIcon = glyph(['M2.4 11.9l.4-2.3 6.4-6.4a1.2 1.2 0 0 1 1.7 0l.9.9a1.2 1.2 0 0 1 0 1.7L5.4 12.2l-2.3.4z', 'M9.2 4.1l2.7 2.7']);
     const ForkIcon = glyph(['M4.6 3.4v4.1a2.4 2.4 0 0 0 2.4 2.4h4.4', 'M9.6 7.9l2.2 2-2.2 2', 'M4.6 3.4a1.3 1.3 0 1 0 0-.1z']);
     const CopyIcon = glyph(['M5.6 5.6V3.9c0-.7.6-1.3 1.3-1.3h5.2c.7 0 1.3.6 1.3 1.3v5.2c0 .7-.6 1.3-1.3 1.3h-1.7', 'M3.9 5.6h5.2c.7 0 1.3.6 1.3 1.3v5.2c0 .7-.6 1.3-1.3 1.3H3.9c-.7 0-1.3-.6-1.3-1.3V6.9c0-.7.6-1.3 1.3-1.3z']);
-    const PinIcon = glyph(['M9.4 2.2l4.4 4.4-1.5 1.5-.6-.2-2.4 2.4.2 1.9-1 1-2.2-2.2-3 3', 'M2.2 13.8l3-3']);
+    // 图钉：**竖直**的图钉轮廓；激活态换同一个形状的实心版 —— 只换颜色用户看不见，
+    // 「线 → 实」的形状差异才是置顶状态最容易被眼睛抓住的信号。
+    const PinIcon = glyph([
+      'M5.1 1.9h5.8l-.55 3.35c-.05.3.03.6.22.83l1.03 1.25c.2.24.31.55.31.86v.61c0 .3-.24.54-.54.54H4.63c-.3 0-.54-.24-.54-.54v-.61c0-.31.11-.62.31-.86L5.43 6.08c.19-.23.27-.53.22-.83L5.1 1.9z',
+      'M8 9.34v4.2',
+    ]);
+
+    /** 置顶**已生效**的图钉：同一轮廓填实（针尖略粗），与线性版一眼可分。 */
+    function PinOnIcon() {
+      return h('svg', {
+        viewBox: '0 0 16 16', width: 15, height: 15, fill: 'none',
+        'aria-hidden': true, style: { display: 'block' },
+      },
+        h('path', {
+          d: 'M5.1 1.9h5.8l-.55 3.35c-.05.3.03.6.22.83l1.03 1.25c.2.24.31.55.31.86v.61c0 .3-.24.54-.54.54H4.63c-.3 0-.54-.24-.54-.54v-.61c0-.31.11-.62.31-.86L5.43 6.08c.19-.23.27-.53.22-.83L5.1 1.9z',
+          fill: 'currentColor',
+          stroke: 'currentColor',
+          strokeWidth: 1,
+          strokeLinejoin: 'round',
+        }),
+        h('path', { d: 'M8 9.2v4.4', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' }));
+    }
 
     // ==========================================================================
     // 置顶（只作用于本面板，存在 cookie + localStorage）
@@ -657,12 +689,12 @@ window.__ModuleLoader__.load({
     /**
      * 面板的展示顺序：先按自由排序，再把置顶项提到最前面。
      *
-     * 0.3.2 的取舍：**一旦用户拖过卡片（有自由顺序），就以自由顺序为唯一真相**，
-     * 不再把置顶项强制前置。否则置顶卡片被拖到中间后会立刻被顶回首位，
-     * 表现就是「拖了没用」—— 这正是本次要修的 bug。
-     * 没有自由顺序时（还没拖过 / 清过缓存）仍然把置顶项提到最前面，
-     * 保持老版本「置顶就在最前」的观感。
-     * 置顶**标记**（卡片上的图钉）始终按 pinned 显示，与排序无关。
+     * 0.4.3 起**置顶永远前置**（两种模式、有没有自由顺序都一样）。
+     * 0.3.2 曾改成「有自由顺序就不前置」，理由是"置顶卡被拖到中间会立刻被顶回首位，
+     * 像拖不动"；但那条理由已经被 0.3.0 的拖动语义消掉了 —— 把置顶卡拖到非首位
+     * 会在落位时**自动取消置顶**（见 `dropCard()` / `applyDropPin()`），所以不会
+     * 互相打架。反过来，0.3.2 的写法让「点置顶按钮」变成了纯标记：用户点第三张卡
+     * 的置顶，卡片不动（0.4.3 用户报的就是这个）。
      *
      * @param rows - 行数组（默认顺序）。
      * @param pinned - 置顶 id 集合（null / undefined = 不处理置顶）。
@@ -671,10 +703,9 @@ window.__ModuleLoader__.load({
      */
     function applyPinnedOrder(rows, pinned, freeOrder) {
       if (!Array.isArray(rows)) return rows;
-      const hasFree = Array.isArray(freeOrder) && freeOrder.length > 0;
       const ordered = applyFreeOrder(rows, freeOrder);
       const safePinned = pinned === undefined || pinned === null ? null : pinned;
-      if (safePinned === null || hasFree) return ordered;
+      if (safePinned === null) return ordered;
       const hot = [];
       const rest = [];
       for (const row of ordered) {
@@ -944,23 +975,20 @@ window.__ModuleLoader__.load({
       /**
        * 面板实际展示顺序。
        *
-       * 0.4.1（用户报「设置自动以后，最后活跃的没排前面」）：**自动模式下列表
-       * 整体按活跃度排**（见上面 `flat`），不再让**旧的**置顶 / 手动顺序插队。
+       * 0.4.1（用户报「设置自动以后，最后活跃的没排前面」）：自动模式下**其余卡片**
+       * 整体按活跃度排（见上面 `flat`），不再让**旧的手动顺序**插队。
        *
-       * 之前这里无条件走 `applyPinnedOrder`，于是出现两种「设了自动却不自动」：
-       *   1. 置顶过的卡（pinned 记录是永久的）永远压在最前，哪怕它早已不活跃；
-       *   2. 拖过一次卡留下的 ORDER_KEY 是**永久快照**，新活动哪怕刚更新也只会
-       *      被「追加到末尾」（见 applyFreeOrder 的 fresh 分支）。
-       * 两种情况都让用户看到「最后活跃的排在后面」，而且光靠设置页点一下
-       * 「自动」也救不回来 —— 它只清存储里的自由顺序，pinned 依然压着。
+       * 0.4.3（用户报「点击第三张卡片置顶，并没有真的放到第一张」）：自动模式
+       * **不再丢弃置顶**。置顶是用户的明确意图，"自动"只决定**其余卡**的顺序，
+       * 所以两种模式都走 `applyPinnedOrder`（置顶恒前置）：
+       *   - 自动：置顶在前，其余按活跃度倒序；
+       *   - 固定：置顶在前，其余按用户拖出来的自由顺序。
+       * 0.4.1 曾在「自动」里忽略置顶（只留图钉标记），结果点置顶按钮卡片不动，
+       * 用户以为按钮坏了 / 我们这次的报障就是这个。
        *
-       * 但**用户当场拖出来的顺序仍然生效**（`丁`：刚拖完又被活跃度弹回去，
-       * 等于拖不动）。区分办法是 `dragSeq`：开始拖动时递增，拖完写顺序后
-       * 面板仍带着这个序号渲染；只有序号变了（切模式 / 重挂载 / 活跃度重排
-       * 后的新会话）才回到纯活跃度。
-       *
-       * 固定模式保持老行为（置顶在前 + 自由顺序），那是用户自己排的顺序。
-       * 置顶**标记**（图钉）与排序无关，照旧显示。
+       * 用户**当场拖出来**的顺序仍然优先（否则拖完立刻被活跃度弹回原位，等于拖不动）：
+       * `dragOrderRef` 存着最近一次落盘的顺序快照，`freeOrder` 与它完全相等就照用
+       * （此时同样叠加置顶前置，但落位时已按落位位置更新过置顶集合，不会打架）。
        */
       const panelOrder = React.useMemo(() => {
         if (groupAuto !== true) return applyPinnedOrder(flat, pinned, freeOrder);
@@ -969,7 +997,8 @@ window.__ModuleLoader__.load({
         const fresh = frozen !== null
           && Array.isArray(freeOrder) && freeOrder.length > 0
           && frozen.join(',') === freeOrder.join(',');
-        return fresh ? applyPinnedOrder(flat, pinned, freeOrder) : flat.slice();
+        // 自动模式没有"当场拖过"时忽略自由顺序，但**置顶照旧前置**。
+        return applyPinnedOrder(flat, pinned, fresh ? freeOrder : null);
       }, [flat, pinned, freeOrder, groupAuto]);
 
       const open = (id) => {
@@ -1187,13 +1216,12 @@ window.__ModuleLoader__.load({
           setDrag(null);
           return;
         }
-        // 置顶只是**标记**，不参与排序（见 applyPinnedOrder 的说明），
-        // 所以落位时唯一要做的是：落到首位就顺带打上置顶标记，
-        // 其余情况一律保持原有置顶集合 —— 挪位不会让图钉凭空消失。
-        const shouldPin = pinAfterDrop(order, id);
-        const nextPinned = shouldPin && !pinned.has(id)
-          ? [id, ...(Array.isArray(pinnedIds) ? pinnedIds : []).filter((item) => item !== id)]
-          : (Array.isArray(pinnedIds) ? pinnedIds.slice() : []);
+        // 0.4.3：置顶恒前置，所以落位后的置顶集合必须和落点一致 ——
+        //   落到首位 = 置顶；落到其它位置 = **取消置顶**。
+        // 以前这里「其余情况一律保持置顶」，配合 0.3.2「有自由顺序就不前置」，
+        // 结果是拖走置顶卡没问题、点置顶按钮却没反应；现在反过来：置顶一定前置，
+        // 被拖离首位就自动取消置顶，两者不会再打架。
+        const nextPinned = applyDropPin(pinnedIds, id, pinAfterDrop(order, id));
         setPinnedIds(nextPinned);
         writePinned(nextPinned);
         setFreeOrder(order);
@@ -1739,14 +1767,44 @@ window.__ModuleLoader__.load({
           });
       };
 
+      /**
+       * 置顶后卡片会跳到列表最前：把它滚进可视区。
+       *
+       * 否则点列表靠下的卡片的置顶按钮时，卡片当场"消失"（跑到视口上方），
+       * 用户会以为按钮只是改了颜色。拿不到 DOM / 不支持 rAF 时静默跳过。
+       */
+      const revealCard = (id) => {
+        try {
+          const run = () => {
+            const rows = document.querySelectorAll('.dsh-wso-rows > .dsh-wso-row');
+            for (const row of rows) {
+              if (typeof row?.getAttribute !== 'function') continue;
+              if (row.getAttribute('data-session-id') !== id) continue;
+              if (typeof row.scrollIntoView === 'function') row.scrollIntoView({ block: 'nearest' });
+              return;
+            }
+          };
+          if (typeof window !== 'undefined' && window !== null && typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(run);
+          } else {
+            run();
+          }
+        } catch {
+          // 纯观感增强，失败不影响置顶。
+        }
+      };
+
       /** 切换置顶（只影响本面板）。 */
       const togglePin = (id) => {
         const next = new Set(pinnedIds);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
+        const pinning = !next.has(id);
+        if (pinning) next.add(id);
+        else next.delete(id);
         const list = [...next];
         setPinnedIds(list);
         writePinned(list);
+        // 只有「置顶」需要追着卡片走；取消置顶时卡片回到原位，不强行滚动。
+        if (pinning) revealCard(id);
       };
 
       const copyId = (id) => {
@@ -1781,6 +1839,8 @@ window.__ModuleLoader__.load({
         className: 'dsh-wso-act' + (options.danger ? ' is-danger' : '') + (options.on ? ' is-on' : ''),
         title: label,
         'aria-label': label,
+        // 置顶是一个开关：把状态也交给无障碍层（读屏会说「已按下」）。
+        ...(options.on === undefined ? {} : { 'aria-pressed': options.on === true }),
         disabled: busy || options.disabled === true,
         onClick: (event) => {
           event.stopPropagation();
@@ -1825,7 +1885,7 @@ window.__ModuleLoader__.load({
         }
 
         const byName = {
-          pin: act('pin', pinned.has(row.id) ? t('actUnpin') : t('actPin'), PinIcon, () => togglePin(row.id), { on: pinned.has(row.id) }),
+          pin: act('pin', pinned.has(row.id) ? t('actUnpin') : t('actPin'), pinned.has(row.id) ? PinOnIcon : PinIcon, () => togglePin(row.id), { on: pinned.has(row.id) }),
           rename: act('rename', t('actRename'), RenameIcon, () => {
             setRenaming(row.id);
             setDraft(row.title);
@@ -1851,7 +1911,9 @@ window.__ModuleLoader__.load({
       // 卡片本体是 div[role=button]：<button> 里不能再嵌操作按钮。
       const rowOf = () => (row) => h('div', {
         key: row.id,
-        className: 'dsh-wso-row' + (drag !== null && drag.id === row.id ? ' is-dragging' : ''),
+        className: 'dsh-wso-row'
+          + (pinned.has(row.id) ? ' is-pinned' : '')
+          + (drag !== null && drag.id === row.id ? ' is-dragging' : ''),
         role: 'button',
         tabIndex: 0,
         title: row.title,
@@ -1887,7 +1949,9 @@ window.__ModuleLoader__.load({
           h('span', { className: 'dsh-wso-status' },
             h('span', { className: 'dsh-wso-dot' + (row.running ? ' is-live' : ''), 'aria-hidden': true }),
             row.running ? t('live') : t('updatedAgo', { time: relativeTime(now, row.updatedAt) })),
-          pinned.has(row.id) ? h('span', { className: 'dsh-wso-pin', title: t('pinBadge') }, h(PinIcon)) : null),
+          pinned.has(row.id)
+            ? h('span', { className: 'dsh-wso-pin', title: t('pinBadge') }, h(PinOnIcon))
+            : null),
         h('span', { className: 'dsh-wso-text' },
           h('span', { className: 'dsh-wso-text-title' }, row.title)),
         renaming === row.id
@@ -2803,14 +2867,11 @@ window.__ModuleLoader__.load({
         if (value === auto) return;
         setAuto(value);
         writeGroupAuto(value);
-        // 手动拖出来的顺序会压住「自动 / 固定」的排序结果（applyPinnedOrder
-        // 见到自由顺序就原样返回）。切模式是用户明确要求换一种排法，
-        // 所以顺手清掉手动顺序，否则设置页点了没反应。
+        // 手动拖出来的顺序只在「固定」模式生效；切模式是用户明确要求换一种排法，
+        // 所以顺手清掉，否则设置页点了没反应。
         writeOrder([]);
-        // 0.4.1：置顶记录同样是**永久**的，固定模式下它会一直被提到最前。
-        // 切到「自动」时一并清掉，否则「自动」名不副实：
-        // 面板虽然改按活跃度排，置顶的旧卡仍插在最前面（用户报的正是这个）。
-        if (value === true) writePinned([]);
+        // 0.4.3：**不再**顺带清掉置顶。置顶现在两种模式都恒前置（0.4.1 曾因为
+        // 「自动」忽略置顶而清掉它），清掉等于用户一切换模式就把钉过的卡弄丢。
         notifyOrderReset();
       };
 

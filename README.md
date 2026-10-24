@@ -10,7 +10,7 @@
 
 ### 它做什么
 
-侧边栏多一个入口，主面板把会话铺成一条扁平卡片列表（不再按工作区分块）：
+侧边栏多一个入口，主面板按工作区分组展示会话：
 
 | 状态 | 侧栏按钮 | 面板内容 |
 | --- | --- | --- |
@@ -25,7 +25,7 @@
 
 | 操作 | 说明 |
 | --- | --- |
-| 置顶 | 固定模式下提到最前（自动模式下只是个标记，排序按活跃度；记在 cookie + localStorage） |
+| 置顶 | 提到最前（只影响本面板，记在 cookie + localStorage）。置顶后卡片左侧出现品牌色竖条、边框同色、图钉变实心且按钮保持高亮 —— 自动排序下只作标记，切到「固定」才会排到最前 |
 | 重命名 | 卡片内就地编辑，Enter 保存 / Esc 取消 |
 | 复制 ID | 复制会话 ID 到剪贴板 |
 | 分叉 | 从当前点创建分支并跳过去 |
@@ -81,31 +81,29 @@
 
 ### 排序（自动 / 固定）
 
-**默认是「自动」**：整张列表按**最后活跃**从新到旧排 —— **跨工作区一起比**，
-不是先按工作区分块再各自排。
+**默认是「自动」**：置顶的卡片排在最前，其余卡片按活跃度（最近更新时间）从新到旧铺成一条列表：
 
-> 0.4.1 修的问题：以前自动模式其实是「组内按活跃度、组间按组序」，所以 A 组的旧会话
-> 会把 B 组刚更新的会话压在下面，看起来就是「设了自动，最后活跃的没排前面」。另外置顶
-> 记录和拖过一次留下的旧顺序都是**永久**的，会无条件插队。现在自动模式这三样都不看了。
+1. 置顶的卡片排在最前（按卡片自己的先后，两种模式都一样）；
+2. 其余卡片按 `updatedAt` 倒序 —— **跨工作区一起比**，不再按工作区聚块；
+3. 活跃度完全相同的卡保持原顺序（稳定排序，不抖）；
+4. **「未分组」的卡永远在最后**，无论它多活跃。
 
-- 自动模式下**置顶只是个标记**，不会把卡提到最前；切到「自动」还会顺带清掉置顶记录。
-- 自动模式下**拖拽仍然立刻生效**（你刚摆好的位置不会被活跃度立刻弹回去），但下一次
-  活跃度变化（挂载 / 运行态翻转 / 手动刷新）就回到按活跃度排。
-- **「未分组」永远排在最后**，无论它多活跃。
+选「**固定**」则忽略活跃度：置顶在前，其余按你自己拖出来的顺序排列。
 
-选「**固定**」则完全按你自己排的顺序来：置顶的卡在前面，其余按拖动顺序 ——
-与 0.1.x 的行为一致。
+- 点卡片右上角的图钉按钮 → 卡片**立刻排到第一**，整卡出现品牌色竖条、图钉变实心、按钮高亮；再点一次取消置顶，卡片回到原位。
+- 把置顶卡拖到别的位置会**自动取消置顶**（否则它会被立刻顶回最前，看起来像拖不动）。
+- 自动模式下只有「置顶」会插队，未置顶的卡始终严格按活跃度排。
 
 **在哪设置**：`设置 → 进行中/对话总览`，单选「自动 / 固定」，改完立即生效（写入 cookie +
-localStorage，双保险）。
+localStorage，双保险）。切换模式会清掉拖出来的顺序（否则「固定」不生效），但**不会**清掉置顶。
 
 **老用户升级**：如果你以前手动拖过顺序（存在侧栏面板顺序记录），首次升级会自动落成
 「固定」，顺序原样不动；面板底部会出现一次提示条，点「去设置」可直接跳到设置页。
 不想再看到它，点掉即可 —— 提示不常驻、不占位。
 
-**关于「实时」**：会话流式输出时 `updatedAt` 会毫秒级抖动。如果拿它当排序依据，列表会一行
-一行地跳。所以自动模式只在**挂载、运行态翻转、手动刷新**这三个时机重算顺序，期间活跃度
-变动不会触发重排。
+**关于「实时」**：会话流式输出时 `updatedAt` 会毫秒级抖动。如果拿它当排序依据，卡片会
+一行一行地跳。所以自动模式只在**挂载、运行态翻转、手动刷新**这三个时机重算列表顺序，
+期间活跃度的毫秒级变动不会触发重排。
 
 ### 与主题联动
 
@@ -131,10 +129,10 @@ pnpm add dsh-workspace-ranswork
 
 ```bash
 # 指定版本
-pnpm add dsh-workspace-ranswork@0.4.0
+pnpm add dsh-workspace-ranswork@0.4.3
 
 # 不想用 npm 时（能装，但没有更新提醒）
-pnpm add https://github.com/rans725/dsh-workspace-ranswork/archive/refs/tags/v0.4.0.tar.gz
+pnpm add https://github.com/rans725/dsh-workspace-ranswork/archive/refs/tags/v0.4.3.tar.gz
 
 # 本地开发时
 pnpm add link:/path/to/dsh-workspace-ranswork
@@ -148,7 +146,7 @@ pnpm add link:/path/to/dsh-workspace-ranswork
 
 ### What it does
 
-A sidebar entry that opens one flat card list (no per-workspace sections):
+A sidebar entry that opens a workspace-grouped panel:
 
 - **When something is running** → the button reads *Running* and the panel lists only running sessions.
 - **When nothing is running** → the button reads *Conversations* and the panel lists every visible conversation, newest first.
@@ -158,8 +156,10 @@ Archived sessions, blank drafts and subagent sessions are always excluded.
 ### Card actions
 
 Hover a card to reveal an action strip: **pin** (this panel only), **rename**, **copy session id**,
-**fork**, **stop** (running cards only) and **archive**. Destructive actions ask for confirmation.
-Clicking the card body still opens the session.
+**fork**, **stop** (running cards only) and **archive**. Pinning marks the card visibly — brand accent
+bar on the left, matching border, a filled pin badge, and a highlighted pin button. Under **Auto**
+order pinning only marks the card; switch to **Fixed** to actually move it to the top.
+Destructive actions ask for confirmation. Clicking the card body still opens the session.
 
 ### Custom card buttons
 
@@ -182,9 +182,8 @@ Besides the pin button, you can **drag a card to the position you want inside it
 
 - **Within the owning group only**: dropping into another group does nothing and never changes the
   session's workspace.
-- **Dropping at the top pins it** (a pin badge appears); dragging an already-pinned
-  card to a non-first position keeps the pin as a marker only. Pin ordering applies in **Fixed**
-  mode — in Auto the list stays activity-ordered. Drag-to-pin and the pin button share the **same**
+- **Dropping at the top of the group pins it** (a pin badge appears); dragging an already-pinned
+  card to a non-first position **unpins it**. Drag-to-pin and the pin button share the **same**
   pinned set (cookie `dsh_wso_pinned` + localStorage `dsh.workspace-ranswork.pinned`) — there is
   only ever one source of truth.
 - While dragging, the card is lifted and semi-transparent, and a dashed indicator marks the drop
@@ -202,29 +201,28 @@ Keyboard behaviour is unchanged: focus a card and press Enter / Space to open it
 header dragging (group order) do not interfere — a card drag only reacts to cards, a header drag only
 to groups.
 
-### Ordering (Auto / Fixed)
+### Order (Auto / Fixed)
 
-**The default is Auto**: the whole list runs from most to least recently active — compared
-**across all workspaces**, not grouped by workspace first and sorted within each group.
+**The default is Auto**: pinned cards come first, then the remaining cards run from most to least
+recently active, as one flat list:
 
-> What 0.4.1 fixed: Auto used to be "sorted within a group, but groups ordered by group". So an
-> older conversation from workspace A could sit above a conversation in workspace B that had just
-> been updated — exactly the "I set Auto but the most recent one isn't first" report. On top of
-> that, pins and any order left over from a past drag were **permanent** and always jumped the
-> queue. Auto now ignores all three.
+1. Pinned cards first (both modes);
+2. The rest ordered by `updatedAt`, newest first — compared **across workspaces**, not grouped;
+3. Cards with exactly the same activity keep their previous relative order (stable, no jitter);
+4. **“Ungrouped” cards are always last**, however active they are.
 
-- In Auto, **a pin is only a marker** — it does not hoist the card. Switching to Auto also clears
-  the pin records.
-- In Auto, **a drag still applies immediately** (your freshly dropped position is not bounced
-  straight back by activity), but the next activity change (mount / running-state flip / explicit
-  refresh) returns the list to activity order.
-- **“Ungrouped” is always last**, however active it is.
+**Fixed** ignores activity: pinned first, then the rest in the order you dragged into place.
 
-**Fixed** keeps exactly the order you arranged: pinned cards first, then the rest in drag order —
-the 0.1.x behaviour.
+- Clicking the pin button moves the card **to the very top at once** — the card gets a brand
+  accent bar, a filled pin, and the button stays highlighted. Click again to unpin; the card
+  returns to its old position.
+- Dragging a pinned card to any other position **unpins it automatically** (otherwise it would be
+  pulled straight back to the top, which looks like dragging is broken).
+- Under Auto only pinned cards jump the queue; everything else is strictly activity-ordered.
 
 **Where to change it**: `Settings → Running / Conversations`, a single Auto / Fixed radio. The
-change applies immediately and is stored in both a cookie and localStorage.
+change applies immediately and is stored in both a cookie and localStorage. Switching modes clears
+the dragged order (so Fixed actually takes effect) but **keeps** your pins.
 
 **Upgrading from 0.1.x**: if you had previously dragged a manual order (a sidebar panel-order
 record exists), the first launch switches you to **Fixed** and your order stays exactly as it
@@ -232,8 +230,8 @@ was. A one-time hint appears at the bottom of the panel with an “Open settings
 and it never comes back. The hint is not persistent and reserves no space.
 
 **About “live” ordering**: `updatedAt` churns on a millisecond scale while a session streams.
-Sorting on it directly would make the list jump around row by row. Auto therefore recomputes the
-order only on mount, on a running-state flip, and on an explicit refresh.
+Sorting on it directly would make cards jump around row by row. Auto therefore recomputes the
+list order only on mount, on a running-state flip, and on an explicit refresh.
 
 ### Theme integration
 
@@ -260,10 +258,10 @@ market correctly reports "no update" — every version then needs a manual reins
 
 ```bash
 # pin a version
-pnpm add dsh-workspace-ranswork@0.4.0
+pnpm add dsh-workspace-ranswork@0.4.3
 
 # without npm (installs fine, but no update notifications)
-pnpm add https://github.com/rans725/dsh-workspace-ranswork/archive/refs/tags/v0.4.0.tar.gz
+pnpm add https://github.com/rans725/dsh-workspace-ranswork/archive/refs/tags/v0.4.3.tar.gz
 
 # or a local checkout, for development
 pnpm add link:/path/to/dsh-workspace-ranswork
