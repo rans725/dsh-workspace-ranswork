@@ -96,6 +96,18 @@ rm -f .npmrc-pub
 `package.json` 里**没有** `private: true`，可以直接发布。
 `files` 已显式列出，`node_modules`、`*.tgz` 不会进包（实测 9 个文件）。
 
+> **npm 11 的发布是异步的**（2026-10-25 实测 npm 11.17.0）：`npm publish` 的 PUT 返回
+> **202 Accepted**，日志写 `Your package is being processed and may take a few minutes to become available`。
+> 这之后一段时间里版本元数据和 tarball 都是 404、`dist-tags.latest` 仍是旧版本 —— **这不是失败**。
+> 实测约 2~3 分钟后元数据转 200，tarball 再晚约 1 分钟。判定顺序：
+> ① `GET /<pkg>/<新版本>` 200 → ② tarball 200 → ③ `dist-tags.latest` 变成新版本。
+> 202 之后**不要**重发同版本，只会撞 `cannot publish over the previously published versions`。
+>
+> **`npm install <pkg>@<新版本>` 报 ETARGET 是本地 packument 缓存**（发布前那次 GET 缓存的旧文档）。
+> 加 `--prefer-online` 再装一次；能装上才说明 registry 真的好了。
+>
+> **token 用完立刻删**：`.npmrc-pub` 先覆盖写再删，`_tools/.npm-token` 同样处理，别留在磁盘上。
+
 ### 发布后必须验证（顺序很重要）
 
 ```bash
